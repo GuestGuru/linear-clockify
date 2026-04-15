@@ -43,21 +43,25 @@ function getVisibleText(el) {
   return null;
 }
 
+// Texts shown when no project is assigned — these are not project names
+const NOT_A_PROJECT = ['Project', 'Add to project', 'Set project'];
+
 function getProjectName() {
   // Strategy 1: Project link in breadcrumb header (desktop)
   const breadcrumbLinks = document.querySelectorAll('a[href*="/gghq/project/"]');
   for (const link of breadcrumbLinks) {
-    // Skip "Open project" navigation links (they have just an SVG icon)
     if (link.querySelector('svg[aria-label]') && !link.querySelector('span')) continue;
     const text = getVisibleText(link);
-    if (text) return text;
+    if (text && !NOT_A_PROJECT.includes(text)) return text;
   }
 
   // Strategy 2: Mobile toolbar button with aria-label="Change project"
   const projectBtn = document.querySelector('button[aria-label="Change project"]');
   if (projectBtn) {
+    // aria-label="No project" on the text span means no project assigned
+    if (projectBtn.querySelector('[aria-label="No project"]')) return null;
     const text = getVisibleText(projectBtn);
-    if (text) return text;
+    if (text && !NOT_A_PROJECT.includes(text)) return text;
   }
 
   // Strategy 3: Right panel "Project" section
