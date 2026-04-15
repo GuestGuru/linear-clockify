@@ -1,5 +1,78 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Clockify Timer</title></head>
-<body><p>Loading...</p><script src="popup.js"></script></body>
+<head>
+  <meta charset="utf-8">
+  <title>Clockify Timer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 300px;
+      padding: 16px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+      color: #e8e8e8;
+      background: #1a1a2e;
+    }
+    .header {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    .timer-info { margin-bottom: 12px; }
+    .issue-key {
+      font-weight: 600;
+      color: #a78bfa;
+      font-size: 14px;
+    }
+    .issue-title { margin-top: 4px; color: #ccc; }
+    .project-name { margin-top: 4px; font-size: 12px; color: #888; }
+    .elapsed {
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 24px;
+      font-weight: 600;
+      color: #ef4444;
+      margin: 12px 0;
+    }
+    .stop-btn {
+      width: 100%;
+      padding: 8px 16px;
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .stop-btn:hover { opacity: 0.9; }
+    .stop-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .no-timer { color: #888; text-align: center; padding: 20px 0; }
+    .external-badge {
+      display: inline-block;
+      font-size: 10px;
+      background: #333;
+      color: #888;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .error { color: #ef4444; margin-top: 8px; font-size: 12px; display: none; }
+    .settings-link {
+      display: block;
+      text-align: center;
+      margin-top: 12px;
+      color: #6366f1;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    .settings-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="header">Clockify Timer</div>
+  <div id="content">Loading...</div>
+  <script src="popup.js"></script>
+</body>
 </html>
