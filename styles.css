@@ -1,1 +1,44 @@
 /* Linear → Clockify Timer — Button Styles */
+
+#lc-timer-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+}
+
+.lc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #fff;
+}
+
+.lc-btn:hover { opacity: 0.9; }
+.lc-btn:active { transform: scale(0.97); }
+.lc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.lc-btn-start { background-color: #22c55e; }
+.lc-btn-stop { background-color: #ef4444; }
+.lc-btn-switch { background-color: #eab308; color: #1a1a1a; }
+
+.lc-elapsed {
+  font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.lc-info { font-size: 12px; color: #888; }
+.lc-settings-link { color: #6366f1; text-decoration: none; font-size: 12px; }
+.lc-settings-link:hover { text-decoration: underline; }
