@@ -114,5 +114,7 @@ function startElapsed(startedAt) {
   elapsedInterval = setInterval(update, 1000);
 }
 
-chrome.storage.onChanged.addListener(() => render());
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.activeTimer || changes.settings) render();
+});
 render();

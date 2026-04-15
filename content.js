@@ -109,6 +109,18 @@ async function handleButtonClick() {
 
 // ─── Error / Warning Display ──────────────────────────────────────────────────
 
+function createSettingsLink() {
+  const link = document.createElement('a');
+  link.href = '#';
+  link.className = 'lc-settings-link';
+  link.textContent = '⚙️ Beállítás szükséges';
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.runtime.sendMessage({ action: 'openOptions' });
+  });
+  return link;
+}
+
 function showError(message) {
   const info = document.getElementById('lc-info');
   if (!info) return;
@@ -116,15 +128,7 @@ function showError(message) {
   if (message === 'NO_API_KEY') {
     info.style.display = 'inline';
     info.textContent = '';
-    const link = document.createElement('a');
-    link.href = '#';
-    link.className = 'lc-settings-link';
-    link.textContent = '⚙️ Beállítás szükséges';
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      chrome.runtime.sendMessage({ action: 'openOptions' });
-    });
-    info.appendChild(link);
+    info.appendChild(createSettingsLink());
     return;
   }
 
@@ -146,6 +150,12 @@ function showWarning(message) {
 let elapsedInterval = null;
 
 async function updateButtonState() {
+  // Always clear interval first, even if we bail early
+  if (elapsedInterval) {
+    clearInterval(elapsedInterval);
+    elapsedInterval = null;
+  }
+
   const issue = parseIssueFromUrl();
   if (!issue) return;
 
@@ -161,24 +171,12 @@ async function updateButtonState() {
     if (info) {
       info.style.display = 'inline';
       info.textContent = '';
-      const link = document.createElement('a');
-      link.href = '#';
-      link.className = 'lc-settings-link';
-      link.textContent = '⚙️ Beállítás szükséges';
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        chrome.runtime.sendMessage({ action: 'openOptions' });
-      });
-      info.appendChild(link);
+      info.appendChild(createSettingsLink());
     }
     return;
   }
 
   button.style.display = '';
-  if (elapsedInterval) {
-    clearInterval(elapsedInterval);
-    elapsedInterval = null;
-  }
 
   const { activeTimer } = await chrome.storage.local.get('activeTimer');
 
@@ -223,11 +221,20 @@ function startElapsedCounter(startedAt) {
 
 // ─── SPA Navigation Observer & Storage Sync ──────────────────────────────────
 
+function createTimerButtonWithRetry(attempts = 3, delay = 300) {
+  createTimerButton();
+  // If button ended up on document.body (fallback), retry to find a better spot
+  const container = document.getElementById(BUTTON_CONTAINER_ID);
+  if (container && container.parentElement === document.body && attempts > 1) {
+    setTimeout(() => createTimerButtonWithRetry(attempts - 1, delay), delay);
+  }
+}
+
 let lastUrl = window.location.href;
 const urlObserver = new MutationObserver(() => {
   if (window.location.href !== lastUrl) {
     lastUrl = window.location.href;
-    setTimeout(createTimerButton, 500);
+    setTimeout(() => createTimerButtonWithRetry(), 500);
   }
 });
 urlObserver.observe(document.body, { childList: true, subtree: true });
@@ -239,5 +246,5 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 if (parseIssueFromUrl()) {
-  setTimeout(createTimerButton, 1000);
+  setTimeout(() => createTimerButtonWithRetry(), 1000);
 }

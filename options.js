@@ -1,8 +1,10 @@
 // Linear → Clockify Timer — Options
 
+const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
+
 const DEFAULT_SETTINGS = {
   apiKey: '',
-  workspaceId: '5ef305cdb6b6d1294b8a04c0',
+  workspaceId: DEFAULT_WORKSPACE_ID,
   autoStop: false,
   teamMapping: {
     GG: 'Cég működése',

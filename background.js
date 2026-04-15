@@ -1,12 +1,13 @@
 // Linear → Clockify Timer — Service Worker
 
 const CLOCKIFY_BASE = 'https://api.clockify.me/api/v1';
+const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
 
 async function getSettings() {
   const { settings } = await chrome.storage.local.get('settings');
   return settings || {
     apiKey: '',
-    workspaceId: '5ef305cdb6b6d1294b8a04c0',
+    workspaceId: DEFAULT_WORKSPACE_ID,
     autoStop: false,
     teamMapping: {
       GG: 'Cég működése',
@@ -78,6 +79,9 @@ async function startTimer(issueKey, issueTitle, teamKey) {
 
   if (projectName) {
     projectId = await resolveProjectId(projectName);
+    if (!projectId) {
+      warning = `Clockify projekt nem található: ${projectName}`;
+    }
   } else {
     warning = `Ismeretlen team: ${teamKey}`;
   }
@@ -109,16 +113,21 @@ async function startTimer(issueKey, issueTitle, teamKey) {
 }
 
 async function stopTimer() {
-  const settings = await getSettings();
-  const userId = await getUserId();
-
-  await clockifyFetch(
-    `/workspaces/${settings.workspaceId}/user/${userId}/time-entries`,
-    { method: 'PATCH', body: JSON.stringify({ end: new Date().toISOString() }) }
-  );
-
+  // Always clear local state, even if the API call fails
   await chrome.storage.local.remove('activeTimer');
   clearBadge();
+
+  try {
+    const settings = await getSettings();
+    const userId = await getUserId();
+    await clockifyFetch(
+      `/workspaces/${settings.workspaceId}/user/${userId}/time-entries`,
+      { method: 'PATCH', body: JSON.stringify({ end: new Date().toISOString() }) }
+    );
+  } catch (err) {
+    // Timer may have been stopped externally — that's fine
+    console.warn('[LC] stopTimer API error (state already cleared):', err.message);
+  }
 
   return { success: true };
 }
@@ -200,6 +209,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  let retried = false;
+
   const handler = async () => {
     try {
       switch (message.action) {
@@ -230,8 +241,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (err.message === 'NO_API_KEY') {
         return { error: 'NO_API_KEY' };
       }
-      if (err.message.includes('Failed to fetch') && !message._retried) {
-        message._retried = true;
+      if (err.message.includes('Failed to fetch') && !retried) {
+        retried = true;
         return handler();
       }
       return { error: err.message };
@@ -242,8 +253,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-chrome.runtime.onInstalled.addListener(() => checkRunningTimer());
-chrome.runtime.onStartup.addListener(() => checkRunningTimer());
+chrome.runtime.onInstalled.addListener(() => checkRunningTimer().catch(console.error));
+chrome.runtime.onStartup.addListener(() => checkRunningTimer().catch(console.error));
 
 // Auto-stop timer when Linear tab is closed (if enabled in settings)
 chrome.tabs.onRemoved.addListener(async () => {
