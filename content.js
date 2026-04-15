@@ -8,96 +8,29 @@ function parseIssueFromUrl() {
   return { teamKey: match[1], issueNumber: match[2], issueKey: `${match[1]}-${match[2]}` };
 }
 
-function getIssueTitle() {
+function getFallbackTitle() {
   const issue = parseIssueFromUrl();
   let title = document.title.replace(/\s*[—–-]\s*Linear\s*$/, '').trim();
-  // Strip leading issue key (e.g. "IT-2 Fizetési késedelem" → "Fizetési késedelem")
   if (issue) {
     title = title.replace(new RegExp(`^${issue.issueKey}\\s+`), '');
   }
-  title = title || 'Untitled';
-
-  // Build enriched title: "Projekt -- Parent title -- Title"
-  const parts = [];
-
-  const projectName = getProjectName();
-  if (projectName) parts.push(projectName);
-
-  const parentTitle = getParentIssueTitle();
-  if (parentTitle) parts.push(parentTitle);
-
-  parts.push(title);
-
-  return parts.join(' > ');
+  return title || 'Untitled';
 }
 
-function getVisibleText(el) {
-  // Get text from direct span children, skipping aria-hidden elements and separators
-  const spans = el.querySelectorAll('span');
-  for (const span of spans) {
-    // Skip emoji/icon containers
-    if (span.closest('[aria-hidden="true"]')) continue;
-    const text = span.textContent.replace('›', '').trim();
-    if (text) return text;
-  }
-  return null;
-}
+async function getIssueTitle() {
+  const issue = parseIssueFromUrl();
+  if (!issue) return 'Untitled';
 
-// Texts shown when no project is assigned — these are not project names
-const NOT_A_PROJECT = ['Project', 'Add to project', 'Set project'];
+  // Try Linear API via background
+  const result = await chrome.runtime.sendMessage({
+    action: 'getIssueDetails',
+    data: { teamKey: issue.teamKey, issueNumber: issue.issueNumber },
+  });
 
-function getProjectName() {
-  // Strategy 1: Project link in breadcrumb header (desktop)
-  const breadcrumbLinks = document.querySelectorAll('a[href*="/gghq/project/"]');
-  for (const link of breadcrumbLinks) {
-    if (link.querySelector('svg[aria-label]') && !link.querySelector('span')) continue;
-    const text = getVisibleText(link);
-    if (text && !NOT_A_PROJECT.includes(text)) return text;
-  }
+  if (result?.details?.title) return result.details.title;
 
-  // Strategy 2: Mobile toolbar button with aria-label="Change project"
-  const projectBtn = document.querySelector('button[aria-label="Change project"]');
-  if (projectBtn) {
-    // aria-label="No project" on the text span means no project assigned
-    if (projectBtn.querySelector('[aria-label="No project"]')) return null;
-    const text = getVisibleText(projectBtn);
-    if (text && !NOT_A_PROJECT.includes(text)) return text;
-  }
-
-  // Strategy 3: Right panel "Project" section
-  const sectionButtons = document.querySelectorAll('button[aria-expanded]');
-  for (const btn of sectionButtons) {
-    if (btn.textContent.trim().startsWith('Project')) {
-      const section = btn.closest('div')?.parentElement;
-      if (!section) continue;
-      const detailBtn = section.querySelector('button[data-detail-button]');
-      if (!detailBtn) continue;
-      const text = getVisibleText(detailBtn);
-      if (text && !NOT_A_PROJECT.includes(text)) return text;
-    }
-  }
-
-  return null;
-}
-
-function getParentIssueTitle() {
-  // Look for "Sub-issue of" label
-  const allSpans = document.querySelectorAll('span');
-  for (const span of allSpans) {
-    if (span.textContent.trim() === 'Sub-issue of') {
-      const container = span.closest('div[class]');
-      if (!container) continue;
-      const parentLink = container.querySelector('a[href*="/issue/"]');
-      if (!parentLink) continue;
-      // Get the title span (skip the issue key like "IT-1")
-      const linkSpans = parentLink.querySelectorAll('span');
-      for (const s of linkSpans) {
-        const text = s.textContent.trim();
-        if (text && !text.match(/^[A-Z]+-\d+$/)) return text;
-      }
-    }
-  }
-  return null;
+  // Fallback to document.title if API unavailable
+  return getFallbackTitle();
 }
 
 // ─── Timer Button Rendering ───────────────────────────────────────────────────
@@ -179,16 +112,18 @@ async function handleButtonClick() {
       const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
       if (result.error) showError(result.error);
     } else if (activeTimer && !activeTimer.external) {
+      const issueTitle = await getIssueTitle();
       const result = await chrome.runtime.sendMessage({
         action: 'stopAndStartTimer',
-        data: { issueKey: issue.issueKey, issueTitle: getIssueTitle(), teamKey: issue.teamKey },
+        data: { issueKey: issue.issueKey, issueTitle, teamKey: issue.teamKey },
       });
       if (result.error) showError(result.error);
       if (result.warning) showWarning(result.warning);
     } else {
+      const issueTitle = await getIssueTitle();
       const result = await chrome.runtime.sendMessage({
         action: 'startTimer',
-        data: { issueKey: issue.issueKey, issueTitle: getIssueTitle(), teamKey: issue.teamKey },
+        data: { issueKey: issue.issueKey, issueTitle, teamKey: issue.teamKey },
       });
       if (result.error) showError(result.error);
       if (result.warning) showWarning(result.warning);

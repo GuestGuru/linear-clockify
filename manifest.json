@@ -6,6 +6,7 @@
   "permissions": ["storage", "alarms", "tabs"],
   "host_permissions": [
     "https://api.clockify.me/*",
+    "https://api.linear.app/*",
     "https://linear.app/gghq/*"
   ],
   "background": {

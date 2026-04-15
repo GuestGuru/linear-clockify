@@ -1,6 +1,7 @@
 // Linear → Clockify Timer — Service Worker
 
 const CLOCKIFY_BASE = 'https://api.clockify.me/api/v1';
+const LINEAR_BASE = 'https://api.linear.app/graphql';
 const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
 
 async function getSettings() {
@@ -69,6 +70,46 @@ async function resolveProjectId(projectName) {
   cache[projectName] = match.id;
   await chrome.storage.local.set({ projectCache: cache });
   return match.id;
+}
+
+async function getIssueDetails(teamKey, issueNumber) {
+  const settings = await getSettings();
+  if (!settings.linearApiKey) return null;
+
+  const query = `query($teamKey: String!, $number: Float!) {
+    issues(filter: { team: { key: { eq: $teamKey } }, number: { eq: $number } }, first: 1) {
+      nodes {
+        title
+        project { name }
+        parent { title }
+      }
+    }
+  }`;
+
+  const response = await fetch(LINEAR_BASE, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': settings.linearApiKey,
+    },
+    body: JSON.stringify({ query, variables: { teamKey, number: Number(issueNumber) } }),
+  });
+
+  if (!response.ok) {
+    console.warn('[LC] Linear API error:', response.status);
+    return null;
+  }
+
+  const json = await response.json();
+  const issue = json.data?.issues?.nodes?.[0];
+  if (!issue) return null;
+
+  const parts = [];
+  if (issue.project?.name) parts.push(issue.project.name);
+  if (issue.parent?.title) parts.push(issue.parent.title);
+  parts.push(issue.title);
+
+  return { title: parts.join(' > ') };
 }
 
 async function startTimer(issueKey, issueTitle, teamKey) {
@@ -225,6 +266,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await stopTimer();
           const { issueKey, issueTitle, teamKey } = message.data;
           return await startTimer(issueKey, issueTitle, teamKey);
+        }
+        case 'getIssueDetails': {
+          const { teamKey, issueNumber } = message.data;
+          const details = await getIssueDetails(teamKey, issueNumber);
+          return { details };
         }
         case 'getStatus': {
           const { activeTimer } = await chrome.storage.local.get('activeTimer');

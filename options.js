@@ -4,6 +4,7 @@ const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
 
 const DEFAULT_SETTINGS = {
   apiKey: '',
+  linearApiKey: '',
   workspaceId: DEFAULT_WORKSPACE_ID,
   autoStop: false,
   teamMapping: {
@@ -29,6 +30,7 @@ async function render() {
   const settings = await loadSettings();
 
   document.getElementById('apiKey').value = settings.apiKey || '';
+  document.getElementById('linearApiKey').value = settings.linearApiKey || '';
   document.getElementById('workspaceId').value = settings.workspaceId || DEFAULT_SETTINGS.workspaceId;
   document.getElementById('autoStop').checked = settings.autoStop || false;
 
@@ -107,6 +109,7 @@ function showStatus(message, isError) {
 document.getElementById('save').addEventListener('click', async () => {
   const settings = {
     apiKey: document.getElementById('apiKey').value.trim(),
+    linearApiKey: document.getElementById('linearApiKey').value.trim(),
     workspaceId: document.getElementById('workspaceId').value.trim() || DEFAULT_SETTINGS.workspaceId,
     autoStop: document.getElementById('autoStop').checked,
     teamMapping: collectMapping(),
