@@ -12,10 +12,10 @@ async function render() {
     elapsedInterval = null;
   }
 
-  if (!settings?.apiKey) {
+  if (!settings?.apiKey || !settings?.linearApiKey) {
     const msg = document.createElement('div');
     msg.className = 'no-timer';
-    msg.textContent = 'API key nincs beállítva';
+    msg.textContent = 'API key(ek) nincsenek beállítva';
     content.appendChild(msg);
 
     const link = document.createElement('a');

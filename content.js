@@ -194,7 +194,7 @@ async function updateButtonState() {
 
   const { settings } = await chrome.storage.local.get('settings');
 
-  if (!settings?.apiKey) {
+  if (!settings?.apiKey || !settings?.linearApiKey) {
     button.style.display = 'none';
     if (info) {
       info.style.display = 'inline';
