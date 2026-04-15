@@ -244,3 +244,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.runtime.onInstalled.addListener(() => checkRunningTimer());
 chrome.runtime.onStartup.addListener(() => checkRunningTimer());
+
+// Auto-stop timer when Linear tab is closed (if enabled in settings)
+chrome.tabs.onRemoved.addListener(async () => {
+  const settings = await getSettings();
+  if (!settings.autoStop) return;
+
+  const { activeTimer } = await chrome.storage.local.get('activeTimer');
+  if (!activeTimer || activeTimer.external) return;
+
+  // Check if any remaining Linear tabs are open
+  const tabs = await chrome.tabs.query({ url: 'https://linear.app/gghq/*' });
+  if (tabs.length === 0) {
+    await stopTimer();
+  }
+});
