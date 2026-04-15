@@ -72,11 +72,8 @@ function getProjectName() {
       if (!section) continue;
       const detailBtn = section.querySelector('button[data-detail-button]');
       if (!detailBtn) continue;
-      const spans = detailBtn.querySelectorAll('span');
-      for (const span of spans) {
-        const text = span.textContent.trim();
-        if (text) return text;
-      }
+      const text = getVisibleText(detailBtn);
+      if (text && !NOT_A_PROJECT.includes(text)) return text;
     }
   }
 
