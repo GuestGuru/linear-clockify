@@ -56,16 +56,22 @@ function createTimerButton() {
 }
 
 function findInsertionPoint() {
-  const identifiers = document.querySelectorAll('a[href*="/issue/"]');
-  for (const el of identifiers) {
-    if (el.textContent.match(/^[A-Z]+-\d+$/)) {
-      const row = el.closest('div');
-      if (row) return row.parentElement;
-    }
+  const issue = parseIssueFromUrl();
+  if (!issue) return document.body;
+
+  // Strategy 1: Find the inner span with just the issue key (e.g. "IT-2")
+  // Linear wraps the key in a child span inside the breadcrumb link
+  const links = document.querySelectorAll(`a[href*="/issue/${issue.issueKey}/"]`);
+  for (const link of links) {
+    const headerRow = link.closest('[data-contextual-menu]')?.parentElement;
+    if (headerRow) return headerRow;
   }
 
-  const main = document.querySelector('main') || document.querySelector('[data-view-id]');
-  if (main) return main;
+  // Strategy 2: Find any link matching the issue and go up
+  for (const link of links) {
+    const row = link.closest('div')?.parentElement;
+    if (row) return row;
+  }
 
   return document.body;
 }
