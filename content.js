@@ -15,7 +15,69 @@ function getIssueTitle() {
   if (issue) {
     title = title.replace(new RegExp(`^${issue.issueKey}\\s+`), '');
   }
-  return title || 'Untitled';
+  title = title || 'Untitled';
+
+  // Build enriched title: "Projekt -- Parent title -- Title"
+  const parts = [];
+
+  const projectName = getProjectName();
+  if (projectName) parts.push(projectName);
+
+  const parentTitle = getParentIssueTitle();
+  if (parentTitle) parts.push(parentTitle);
+
+  parts.push(title);
+
+  return parts.join(' -- ');
+}
+
+function getProjectName() {
+  // Strategy 1: Project link in breadcrumb header
+  const breadcrumbLink = document.querySelector('a[href*="/gghq/project/"]');
+  if (breadcrumbLink) {
+    const labeled = breadcrumbLink.querySelector('[aria-label]');
+    if (labeled) return labeled.getAttribute('aria-label');
+    const text = breadcrumbLink.textContent.replace('›', '').trim();
+    if (text) return text;
+  }
+
+  // Strategy 2: Right panel "Project" section
+  const sectionButtons = document.querySelectorAll('button[aria-expanded]');
+  for (const btn of sectionButtons) {
+    if (btn.textContent.trim().startsWith('Project')) {
+      const section = btn.closest('div')?.parentElement;
+      if (!section) continue;
+      const detailBtn = section.querySelector('button[data-detail-button]');
+      if (!detailBtn) continue;
+      const spans = detailBtn.querySelectorAll('span');
+      for (const span of spans) {
+        const text = span.textContent.trim();
+        if (text) return text;
+      }
+    }
+  }
+
+  return null;
+}
+
+function getParentIssueTitle() {
+  // Look for "Sub-issue of" label
+  const allSpans = document.querySelectorAll('span');
+  for (const span of allSpans) {
+    if (span.textContent.trim() === 'Sub-issue of') {
+      const container = span.closest('div[class]');
+      if (!container) continue;
+      const parentLink = container.querySelector('a[href*="/issue/"]');
+      if (!parentLink) continue;
+      // Get the title span (skip the issue key like "IT-1")
+      const linkSpans = parentLink.querySelectorAll('span');
+      for (const s of linkSpans) {
+        const text = s.textContent.trim();
+        if (text && !text.match(/^[A-Z]+-\d+$/)) return text;
+      }
+    }
+  }
+  return null;
 }
 
 // ─── Timer Button Rendering ───────────────────────────────────────────────────
