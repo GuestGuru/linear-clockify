@@ -28,7 +28,7 @@ function getIssueTitle() {
 
   parts.push(title);
 
-  return parts.join(' -- ');
+  return parts.join(' > ');
 }
 
 function getVisibleText(el) {
