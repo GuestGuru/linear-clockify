@@ -31,24 +31,33 @@ function getIssueTitle() {
   return parts.join(' -- ');
 }
 
+function getVisibleText(el) {
+  // Get text from direct span children, skipping aria-hidden elements and separators
+  const spans = el.querySelectorAll('span');
+  for (const span of spans) {
+    // Skip emoji/icon containers
+    if (span.closest('[aria-hidden="true"]')) continue;
+    const text = span.textContent.replace('›', '').trim();
+    if (text) return text;
+  }
+  return null;
+}
+
 function getProjectName() {
-  // Strategy 1: Project link in breadcrumb header
-  const breadcrumbLink = document.querySelector('a[href*="/gghq/project/"]');
-  if (breadcrumbLink) {
-    const labeled = breadcrumbLink.querySelector('[aria-label]');
-    if (labeled) return labeled.getAttribute('aria-label');
-    const text = breadcrumbLink.textContent.replace('›', '').trim();
+  // Strategy 1: Project link in breadcrumb header (desktop)
+  const breadcrumbLinks = document.querySelectorAll('a[href*="/gghq/project/"]');
+  for (const link of breadcrumbLinks) {
+    // Skip "Open project" navigation links (they have just an SVG icon)
+    if (link.querySelector('svg[aria-label]') && !link.querySelector('span')) continue;
+    const text = getVisibleText(link);
     if (text) return text;
   }
 
   // Strategy 2: Mobile toolbar button with aria-label="Change project"
   const projectBtn = document.querySelector('button[aria-label="Change project"]');
   if (projectBtn) {
-    const spans = projectBtn.querySelectorAll('span');
-    for (const span of spans) {
-      const text = span.textContent.trim();
-      if (text) return text;
-    }
+    const text = getVisibleText(projectBtn);
+    if (text) return text;
   }
 
   // Strategy 3: Right panel "Project" section
