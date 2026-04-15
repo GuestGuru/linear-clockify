@@ -41,7 +41,17 @@ function getProjectName() {
     if (text) return text;
   }
 
-  // Strategy 2: Right panel "Project" section
+  // Strategy 2: Mobile toolbar button with aria-label="Change project"
+  const projectBtn = document.querySelector('button[aria-label="Change project"]');
+  if (projectBtn) {
+    const spans = projectBtn.querySelectorAll('span');
+    for (const span of spans) {
+      const text = span.textContent.trim();
+      if (text) return text;
+    }
+  }
+
+  // Strategy 3: Right panel "Project" section
   const sectionButtons = document.querySelectorAll('button[aria-expanded]');
   for (const btn of sectionButtons) {
     if (btn.textContent.trim().startsWith('Project')) {
