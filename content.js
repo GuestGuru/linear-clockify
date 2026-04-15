@@ -9,7 +9,12 @@ function parseIssueFromUrl() {
 }
 
 function getIssueTitle() {
-  const title = document.title.replace(/\s*[—–-]\s*Linear\s*$/, '').trim();
+  const issue = parseIssueFromUrl();
+  let title = document.title.replace(/\s*[—–-]\s*Linear\s*$/, '').trim();
+  // Strip leading issue key (e.g. "IT-2 Fizetési késedelem" → "Fizetési késedelem")
+  if (issue) {
+    title = title.replace(new RegExp(`^${issue.issueKey}\\s+`), '');
+  }
   return title || 'Untitled';
 }
 

@@ -42,3 +42,18 @@
 .lc-info { font-size: 12px; color: #888; }
 .lc-settings-link { color: #6366f1; text-decoration: none; font-size: 12px; }
 .lc-settings-link:hover { text-decoration: underline; }
+
+/* Compact layout for narrow viewports (mobile Linear) */
+@media (max-width: 768px) {
+  #lc-timer-container {
+    gap: 6px;
+    margin-left: 6px;
+  }
+  .lc-btn {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+  .lc-elapsed {
+    font-size: 12px;
+  }
+}
