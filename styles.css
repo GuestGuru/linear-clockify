@@ -43,6 +43,146 @@
 .lc-settings-link { color: #6366f1; text-decoration: none; font-size: 12px; }
 .lc-settings-link:hover { text-decoration: underline; }
 
+/* Right panel card */
+#lc-right-panel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(120, 120, 130, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+}
+
+.lc-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #888;
+}
+
+.lc-card-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.lc-card-timer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lc-card-divider {
+  height: 1px;
+  background: rgba(120, 120, 130, 0.2);
+  margin: 4px 0;
+}
+
+/* Manual entry form */
+.lc-manual-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lc-form-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lc-time-input {
+  width: 56px;
+  padding: 4px 6px;
+  border: 1px solid rgba(120, 120, 130, 0.3);
+  border-radius: 6px;
+  font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+}
+
+.lc-time-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.lc-dash {
+  color: #888;
+  font-weight: 600;
+}
+
+.lc-date-chip {
+  padding: 4px 8px;
+  border: 1px solid rgba(120, 120, 130, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.lc-date-chip:hover {
+  border-color: #6366f1;
+}
+
+.lc-date-input {
+  padding: 4px 6px;
+  border: 1px solid rgba(120, 120, 130, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  font-family: inherit;
+}
+
+.lc-form-submit-row {
+  display: flex;
+}
+
+.lc-submit-btn {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  background-color: #6366f1;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.lc-submit-btn:hover { opacity: 0.9; }
+.lc-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.lc-status {
+  font-size: 12px;
+  padding: 4px 0;
+}
+.lc-status-info { color: #888; }
+.lc-status-success { color: #22c55e; }
+.lc-status-error { color: #ef4444; }
+
+/* Mobile edit button + expand */
+.lc-mobile-edit-btn {
+  display: none;
+}
+
+.lc-mobile-form-wrap {
+  display: none;
+}
+
 /* Mobile: floating timer button at bottom-right */
 @media (max-width: 768px) {
   #lc-timer-container {
@@ -55,6 +195,14 @@
     padding: 8px 12px;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-width: calc(100vw - 32px);
+    color: #1a1a1a;
+  }
+  #lc-timer-container.lc-mobile-expanded {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
   }
   .lc-btn {
     padding: 6px 14px;
@@ -62,5 +210,45 @@
   }
   .lc-elapsed {
     font-size: 14px;
+  }
+
+  .lc-mobile-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background: #f4f4f5;
+    color: #1a1a1a;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .lc-mobile-edit-btn:hover {
+    background: #e4e4e7;
+  }
+
+  #lc-timer-container.lc-mobile-expanded .lc-mobile-form-wrap {
+    display: block;
+  }
+
+  /* Hide the right panel card on mobile — use the mobile expand instead */
+  #lc-right-panel-card {
+    display: none;
+  }
+
+  /* Mobile form contrast */
+  .lc-mobile-form-wrap .lc-time-input,
+  .lc-mobile-form-wrap .lc-date-chip,
+  .lc-mobile-form-wrap .lc-date-input {
+    background: #fff;
+    border-color: rgba(0, 0, 0, 0.15);
+    color: #1a1a1a;
+  }
+  .lc-mobile-form-wrap .lc-card-subtitle {
+    color: #555;
   }
 }

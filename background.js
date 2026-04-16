@@ -18,9 +18,9 @@ async function getSettings() {
       FIN: 'Pénzügy',
       HR: 'HR',
       KOM: 'Kommunikáció és Vendégek',
-      LBE: 'Lakásbekerülés',
+      LBE: 'Lakásindítás',
       TUL: 'Lakások és Tulajok',
-      LM: 'LM Support',
+      LM: 'Lakásmenedzserek',
     },
   };
 }
@@ -110,6 +110,78 @@ async function getIssueDetails(teamKey, issueNumber) {
   parts.push(issue.title);
 
   return { title: parts.join(' > ') };
+}
+
+async function getEntriesInRange(dayStartISO, dayEndISO) {
+  const settings = await getSettings();
+  const userId = await getUserId();
+  const entries = await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/user/${userId}/time-entries` +
+      `?start=${encodeURIComponent(dayStartISO)}&end=${encodeURIComponent(dayEndISO)}&page-size=200`
+  );
+  return entries || [];
+}
+
+async function findOverlap(startISO, endISO, dayStartISO, dayEndISO) {
+  const entries = await getEntriesInRange(dayStartISO, dayEndISO);
+  const newStart = new Date(startISO).getTime();
+  const newEnd = new Date(endISO).getTime();
+  const now = Date.now();
+
+  for (const e of entries) {
+    const eStart = new Date(e.timeInterval.start).getTime();
+    const eEnd = e.timeInterval.end ? new Date(e.timeInterval.end).getTime() : now;
+    if (eStart < newEnd && eEnd > newStart) {
+      return e;
+    }
+  }
+  return null;
+}
+
+function formatHM(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+async function createManualEntry(issueKey, issueTitle, teamKey, startISO, endISO, dayStartISO, dayEndISO) {
+  const settings = await getSettings();
+
+  const conflict = await findOverlap(startISO, endISO, dayStartISO, dayEndISO);
+  if (conflict) {
+    const cs = new Date(conflict.timeInterval.start);
+    const ce = conflict.timeInterval.end ? new Date(conflict.timeInterval.end) : null;
+    const timeStr = ce ? `${formatHM(cs)}–${formatHM(ce)}` : `${formatHM(cs)}–(fut)`;
+    const desc = conflict.description || '(leírás nélkül)';
+    return { error: 'OVERLAP', conflictWith: `${desc} @ ${timeStr}` };
+  }
+
+  const projectName = teamKey ? settings.teamMapping[teamKey] : null;
+  let projectId = null;
+  let warning = null;
+
+  if (projectName) {
+    projectId = await resolveProjectId(projectName);
+    if (!projectId) {
+      warning = `Clockify projekt nem található: ${projectName}`;
+    }
+  } else if (teamKey) {
+    warning = `Ismeretlen team: ${teamKey}`;
+  }
+
+  const body = {
+    start: startISO,
+    end: endISO,
+    description: `[${issueKey}] ${issueTitle}`,
+  };
+  if (projectId) {
+    body.projectId = projectId;
+  }
+
+  await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries`,
+    { method: 'POST', body: JSON.stringify(body) }
+  );
+
+  return { success: true, warning };
 }
 
 async function startTimer(issueKey, issueTitle, teamKey) {
@@ -266,6 +338,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await stopTimer();
           const { issueKey, issueTitle, teamKey } = message.data;
           return await startTimer(issueKey, issueTitle, teamKey);
+        }
+        case 'createManualEntry': {
+          const { issueKey, issueTitle, teamKey, start, end, dayStart, dayEnd } = message.data;
+          return await createManualEntry(issueKey, issueTitle, teamKey, start, end, dayStart, dayEnd);
         }
         case 'getIssueDetails': {
           const { teamKey, issueNumber } = message.data;

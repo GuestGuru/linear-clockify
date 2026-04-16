@@ -2,6 +2,18 @@
 const content = document.getElementById('content');
 let elapsedInterval = null;
 
+function appendSettingsLink() {
+  const link = document.createElement('a');
+  link.href = '#';
+  link.className = 'settings-link';
+  link.textContent = '⚙️ Beállítások';
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.runtime.openOptionsPage();
+  });
+  content.appendChild(link);
+}
+
 async function render() {
   const { activeTimer } = await chrome.storage.local.get('activeTimer');
   const { settings } = await chrome.storage.local.get('settings');
@@ -17,16 +29,7 @@ async function render() {
     msg.className = 'no-timer';
     msg.textContent = 'API key(ek) nincsenek beállítva';
     content.appendChild(msg);
-
-    const link = document.createElement('a');
-    link.href = '#';
-    link.className = 'settings-link';
-    link.textContent = '⚙️ Beállítások megnyitása';
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      chrome.runtime.openOptionsPage();
-    });
-    content.appendChild(link);
+    appendSettingsLink();
     return;
   }
 
@@ -35,6 +38,7 @@ async function render() {
     msg.className = 'no-timer';
     msg.textContent = 'Nincs aktív timer';
     content.appendChild(msg);
+    appendSettingsLink();
     return;
   }
 
@@ -92,6 +96,8 @@ async function render() {
     });
     content.appendChild(stopBtn);
   }
+
+  appendSettingsLink();
 }
 
 function startElapsed(startedAt) {

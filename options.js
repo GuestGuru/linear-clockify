@@ -15,9 +15,9 @@ const DEFAULT_SETTINGS = {
     FIN: 'Pénzügy',
     HR: 'HR',
     KOM: 'Kommunikáció és Vendégek',
-    LBE: 'Lakásbekerülés',
+    LBE: 'Lakásindítás',
     TUL: 'Lakások és Tulajok',
-    LM: 'LM Support',
+    LM: 'Lakásmenedzserek',
   },
 };
 
