@@ -4,9 +4,17 @@ Chrome extension ami a Linear issue oldalán megjelenít egy Clockify time track
 
 ## Telepítés
 
+### Chrome Web Store (ajánlott)
+
+1. Telepítsd az extensiont a [Chrome Web Store](https://chrome.google.com/webstore/detail/TODO) oldalról
+2. Extension ikon → **Options** → Clockify és Linear API key megadása
+3. Nyiss egy Linear issue-t → használd a timer gombot
+
+### Kézi telepítés (fejlesztőknek)
+
 1. `chrome://extensions/` → **Developer mode** bekapcsolása
 2. **Load unpacked** → válaszd ki ezt a mappát (`linear-clockify/`)
-3. Extension ikon → **Options** → Clockify API key megadása
+3. Extension ikon → **Options** → Clockify és Linear API key megadása
 4. Nyiss egy Linear issue-t → használd a timer gombot
 
 ## Funkciók
@@ -20,6 +28,19 @@ Minden `linear.app/gghq/issue/*` oldalon megjelenik:
 | Nincs futó timer | ▶ Start | Zöld |
 | Ezen az issue-n fut | ⏹ Stop + eltelt idő | Piros |
 | Másik issue-n fut | ⏹ Stop & ▶ Start | Sárga |
+
+### Manuális időrögzítés
+
+A Linear issue jobb paneljén (desktop) megjelenik egy Clockify card a projektválasztó alatt. Tartalma:
+
+- Duplikált Start/Stop gomb
+- **Mettől / Meddig** input (pl. `1413` → `14:13`, Tab → `1500` → `15:00`)
+- Dátumválasztó (alapból „Ma")
+- **Rögzít** gomb → lezárt Clockify entry-t hoz létre (nem indít futó timert)
+
+Átfedés-ellenőrzés: ha a megadott időtartamra már van Clockify entry (vagy fut egy timer), a mentés blokkolva, és megjelenik a konfliktus.
+
+Mobilon a lebegő timer container mellett van egy **✎** gomb, ami kinyitja ugyanezt a formot.
 
 ### Toolbar popup
 
@@ -43,9 +64,9 @@ A timer elindulásakor a Clockify entry automatikusan kitöltődik:
 | FIN | Pénzügy |
 | HR | HR |
 | KOM | Kommunikáció és Vendégek |
-| LBE | Lakásbekerülés |
+| LBE | Lakásindítás |
 | TUL | Lakások és Tulajok |
-| LM | LM Support |
+| LM | Lakásmenedzserek |
 
 A mapping szerkeszthető az Options oldalon.
 
@@ -63,7 +84,7 @@ Az extension Options oldalán (`jobb klikk az ikonon → Options`):
 - Chrome Extension Manifest V3
 - Vanilla JavaScript, nincs build step
 - Clockify REST API (`https://api.clockify.me/api/v1`)
-- Linear adatok DOM/URL-ből (nincs Linear API)
+- Linear GraphQL API (`https://api.linear.app/graphql`)
 
 ### Fájl struktúra
 

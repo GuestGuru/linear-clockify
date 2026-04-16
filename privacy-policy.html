@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linear → Clockify Timer — Privacy Policy</title>
+  <style>
+    body {
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 0 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: #333;
+    }
+    h1 { font-size: 24px; margin-bottom: 4px; }
+    h2 { font-size: 18px; margin-top: 28px; }
+    .updated { color: #888; font-size: 14px; margin-bottom: 24px; }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Linear → Clockify Timer — Privacy Policy</h1>
+  <p class="updated">Last updated: 2026-04-16</p>
+
+  <h2>What this extension does</h2>
+  <p>This Chrome extension adds a Clockify time tracking button to Linear issue pages. It lets you start, stop, and log time entries directly from Linear.</p>
+
+  <h2>Data collected and stored locally</h2>
+  <p>The following data is stored in your browser's local storage (<code>chrome.storage.local</code>) and <strong>never leaves your device</strong> except as described below:</p>
+  <ul>
+    <li><strong>Clockify API key</strong> — used to authenticate with the Clockify API</li>
+    <li><strong>Linear API key</strong> — used to fetch issue details (title, project, parent issue) from the Linear API</li>
+    <li><strong>Clockify Workspace ID</strong> — identifies which Clockify workspace to use</li>
+    <li><strong>Team → Project mapping</strong> — maps Linear teams to Clockify project names</li>
+    <li><strong>User preferences</strong> — auto-stop setting</li>
+  </ul>
+
+  <h2>External services</h2>
+  <p>The extension communicates with two external APIs, using the API keys you provide:</p>
+  <ul>
+    <li><strong>Clockify API</strong> (<code>api.clockify.me</code>) — to start/stop timers, create time entries, and look up projects</li>
+    <li><strong>Linear API</strong> (<code>api.linear.app</code>) — to fetch issue details (title, project name, parent issue identifier)</li>
+  </ul>
+  <p>No data is sent to any other server, analytics service, or third party.</p>
+
+  <h2>Data NOT collected</h2>
+  <ul>
+    <li>No personal information (name, email, etc.)</li>
+    <li>No browsing history or page content beyond Linear issue identifiers</li>
+    <li>No analytics, telemetry, or tracking of any kind</li>
+    <li>No cookies</li>
+  </ul>
+
+  <h2>Data sharing</h2>
+  <p>This extension does <strong>not</strong> sell, share, or transfer any data to third parties. Data only flows between your browser and the Clockify/Linear APIs that you explicitly configured.</p>
+
+  <h2>Permissions explained</h2>
+  <ul>
+    <li><strong>storage</strong> — save your settings and API keys locally</li>
+    <li><strong>alarms</strong> — periodically update the elapsed time display on the browser action badge</li>
+    <li><strong>tabs</strong> — detect when Linear tabs are closed (for the auto-stop feature)</li>
+    <li><strong>host_permissions</strong> — access Clockify API, Linear API, and inject the timer button on Linear pages</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>For questions about this privacy policy, contact: <a href="mailto:krasser.tamas@gmail.com">krasser.tamas@gmail.com</a></p>
+</body>
+</html>
