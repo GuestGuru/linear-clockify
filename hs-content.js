@@ -409,20 +409,23 @@ function ensureHsUI() {
 
 function startHsKeepAlive() {
   if (hsKeepAliveInterval) return;
-  hsKeepAliveInterval = setInterval(ensureHsUI, 1000);
+  hsKeepAliveInterval = setInterval(ensureHsUI, 500);
 }
 
-// DOM observer — fires ensureHsUI (debounced) on any document.body mutation.
-// This catches late-rendering sidebar content on page reload, where the 1s
-// polling is too slow to feel responsive.
+// DOM observer — fires ensureHsUI on any document.body mutation, lightly
+// debounced so we don't run the insert logic hundreds of times per second.
+// 50ms feels immediate but keeps overhead low.
 let hsLastUrl = window.location.href;
 let hsDomDebounce = null;
 const hsDomObserver = new MutationObserver(() => {
   if (window.location.href !== hsLastUrl) {
     hsLastUrl = window.location.href;
   }
-  clearTimeout(hsDomDebounce);
-  hsDomDebounce = setTimeout(ensureHsUI, 200);
+  if (hsDomDebounce) return;
+  hsDomDebounce = setTimeout(() => {
+    hsDomDebounce = null;
+    ensureHsUI();
+  }, 50);
 });
 hsDomObserver.observe(document.body, { childList: true, subtree: true });
 
