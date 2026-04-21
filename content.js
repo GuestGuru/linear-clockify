@@ -11,7 +11,11 @@ const {
   createSettingsLink,
   buildManualEntryForm,
   attachManualEntrySubmit,
+  buildSnapChip,
 } = window.LCShared;
+
+let mainSnapChip = null;
+let cardSnapChip = null;
 
 // ─── URL & Issue Parsing ──────────────────────────────────────────────────────
 
@@ -120,6 +124,11 @@ function createTimerButton() {
   });
 
   container.appendChild(button);
+
+  mainSnapChip = buildSnapChip();
+  mainSnapChip.chip.id = 'lc-snap-chip';
+  container.appendChild(mainSnapChip.chip);
+
   container.appendChild(elapsed);
   container.appendChild(info);
   container.appendChild(mobileEditBtn);
@@ -132,6 +141,7 @@ function createTimerButton() {
 
   button.addEventListener('click', handleButtonClick);
   updateButtonState();
+  mainSnapChip.refresh();
 }
 
 // ─── Right Panel Card ─────────────────────────────────────────────────────────
@@ -212,6 +222,11 @@ function createRightPanelCard() {
   info.style.display = 'none';
 
   timerRow.appendChild(button);
+
+  cardSnapChip = buildSnapChip();
+  cardSnapChip.chip.id = 'lc-card-snap-chip';
+  timerRow.appendChild(cardSnapChip.chip);
+
   timerRow.appendChild(elapsed);
   timerRow.appendChild(info);
 
@@ -250,6 +265,7 @@ function createRightPanelCard() {
   parent.insertBefore(card, afterNode.nextSibling);
 
   button.addEventListener('click', handleButtonClick);
+  cardSnapChip.refresh();
 }
 
 function findInsertionPoint() {
@@ -426,6 +442,9 @@ async function updateButtonState() {
   if (state === 'stop') {
     startElapsedCounter(activeTimer.startedAt);
   }
+
+  if (mainSnapChip) mainSnapChip.refresh();
+  if (cardSnapChip) cardSnapChip.refresh();
 }
 
 function startElapsedCounter(startedAt) {
