@@ -278,3 +278,40 @@
   border-color: #e5e7eb;
 }
 .lc-snap-chip:hover { filter: brightness(0.97); }
+
+.lc-elapsed {
+  cursor: pointer;
+  user-select: none;
+}
+.lc-elapsed:hover {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.lc-start-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.lc-start-editor-label {
+  color: #6b7280;
+}
+.lc-start-editor-input {
+  width: 60px;
+}
+.lc-start-editor-status {
+  font-size: 12px;
+  line-height: 1.4;
+  padding-left: 4px;
+}
+.lc-start-editor-status-error {
+  color: #b91c1c;
+}
+.lc-start-editor-status-success {
+  color: #059669;
+}
+.lc-start-editor-status-info {
+  color: #6b7280;
+}

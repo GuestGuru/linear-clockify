@@ -236,6 +236,117 @@
     return { chip, refresh, render };
   }
 
+  // ─── Start-time editor ───────────────────────────────────────────────────
+
+  /**
+   * Create an inline editor for changing a running timer's start time.
+   * Initially hidden; call `show(currentStartISO)` to reveal pre-filled with HH:MM.
+   *
+   * @returns {{ container: HTMLElement, show: (iso: string) => void, hide: () => void }}
+   */
+  function buildStartEditor() {
+    const container = document.createElement('div');
+    container.className = 'lc-start-editor';
+    container.style.display = 'none';
+
+    const label = document.createElement('span');
+    label.className = 'lc-start-editor-label';
+    label.textContent = 'Új kezdés:';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'lc-time-input lc-start-editor-input';
+    input.placeholder = 'HH:MM';
+    input.inputMode = 'numeric';
+    input.autocomplete = 'off';
+    input.maxLength = 5;
+
+    const status = document.createElement('span');
+    status.className = 'lc-start-editor-status';
+
+    container.appendChild(label);
+    container.appendChild(input);
+    container.appendChild(status);
+
+    let currentStartISO = null;
+
+    function setStatus(kind, text) {
+      status.className = `lc-start-editor-status lc-start-editor-status-${kind}`;
+      status.textContent = text || '';
+    }
+
+    function show(iso) {
+      currentStartISO = iso;
+      const d = new Date(iso);
+      input.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      setStatus('', '');
+      container.style.display = 'flex';
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 0);
+    }
+
+    function hide() {
+      container.style.display = 'none';
+      setStatus('', '');
+    }
+
+    async function save() {
+      const parsed = parseTimeInput(input.value);
+      if (!parsed) {
+        setStatus('error', 'Érvénytelen idő');
+        return;
+      }
+      input.value = formatHM(parsed);
+
+      // Build ISO using the date of currentStartISO (so we keep the same day)
+      const baseDate = new Date(currentStartISO);
+      const y = baseDate.getFullYear();
+      const mo = baseDate.getMonth();
+      const d = baseDate.getDate();
+      const newStartISO = new Date(y, mo, d, parsed.h, parsed.m, 0, 0).toISOString();
+
+      setStatus('info', 'Mentés…');
+      try {
+        const result = await chrome.runtime.sendMessage({
+          action: 'updateTimerStart',
+          data: { newStartISO },
+        });
+        if (result?.error === 'OVERLAP') {
+          setStatus('error', `Átfedés: ${result.conflictWith}`);
+          return;
+        }
+        if (result?.error) {
+          setStatus('error', result.error);
+          return;
+        }
+        setStatus('success', '✓');
+        setTimeout(() => hide(), 600);
+      } catch (err) {
+        setStatus('error', err.message);
+      }
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        save();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        hide();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      if (!input.value) return;
+      const parsed = parseTimeInput(input.value);
+      if (parsed) input.value = formatHM(parsed);
+    });
+
+    return { container, show, hide };
+  }
+
   // ─── Manual entry form builder ───────────────────────────────────────────
 
   function buildManualEntryForm() {
@@ -409,6 +520,7 @@
     computeSnapTime,
     buildSnapChip,
     isOverlappingEntry,
+    buildStartEditor,
   };
 
   global.LCShared = api;

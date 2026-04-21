@@ -12,10 +12,13 @@ const {
   buildManualEntryForm,
   attachManualEntrySubmit,
   buildSnapChip,
+  buildStartEditor,
 } = window.LCShared;
 
 let mainSnapChip = null;
 let cardSnapChip = null;
+let mainStartEditor = null;
+let cardStartEditor = null;
 
 // ─── URL & Issue Parsing ──────────────────────────────────────────────────────
 
@@ -129,10 +132,26 @@ function createTimerButton() {
   mainSnapChip.chip.id = 'lc-snap-chip';
   container.appendChild(mainSnapChip.chip);
 
+  elapsed.addEventListener('click', async () => {
+    if (!mainStartEditor) return;
+    if (mainStartEditor.container.style.display !== 'none') {
+      mainStartEditor.hide();
+      return;
+    }
+    const { activeTimer } = await chrome.storage.local.get('activeTimer');
+    if (activeTimer?.startedAt && !activeTimer.external) {
+      mainStartEditor.show(activeTimer.startedAt);
+    }
+  });
+
   container.appendChild(elapsed);
   container.appendChild(info);
   container.appendChild(mobileEditBtn);
   container.appendChild(mobileFormWrap);
+
+  mainStartEditor = buildStartEditor();
+  mainStartEditor.container.id = 'lc-start-editor';
+  container.appendChild(mainStartEditor.container);
 
   const insertionPoint = findInsertionPoint();
   if (insertionPoint) {
@@ -227,8 +246,23 @@ function createRightPanelCard() {
   cardSnapChip.chip.id = 'lc-card-snap-chip';
   timerRow.appendChild(cardSnapChip.chip);
 
+  elapsed.addEventListener('click', async () => {
+    if (!cardStartEditor) return;
+    if (cardStartEditor.container.style.display !== 'none') {
+      cardStartEditor.hide();
+      return;
+    }
+    const { activeTimer } = await chrome.storage.local.get('activeTimer');
+    if (activeTimer?.startedAt && !activeTimer.external) {
+      cardStartEditor.show(activeTimer.startedAt);
+    }
+  });
+
   timerRow.appendChild(elapsed);
   timerRow.appendChild(info);
+
+  cardStartEditor = buildStartEditor();
+  cardStartEditor.container.id = 'lc-card-start-editor';
 
   const divider = document.createElement('div');
   divider.className = 'lc-card-divider';
@@ -257,6 +291,7 @@ function createRightPanelCard() {
 
   card.appendChild(title);
   card.appendChild(timerRow);
+  card.appendChild(cardStartEditor.container);
   card.appendChild(divider);
   card.appendChild(manualTitle);
   card.appendChild(form);
@@ -445,6 +480,11 @@ async function updateButtonState() {
 
   if (mainSnapChip) mainSnapChip.refresh();
   if (cardSnapChip) cardSnapChip.refresh();
+
+  if (state !== 'stop') {
+    if (mainStartEditor) mainStartEditor.hide();
+    if (cardStartEditor) cardStartEditor.hide();
+  }
 }
 
 function startElapsedCounter(startedAt) {
