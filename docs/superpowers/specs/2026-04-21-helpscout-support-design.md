@@ -9,7 +9,7 @@
 Két új funkció a `linear-clockify` extension-höz:
 
 1. **HelpScout támogatás** — a Linear mellett a `secure.helpscout.net/conversation/*` oldalakon is jelenjen meg a Clockify timer UI (Start/Stop + manuális rögzítés), hasonló UX-szel. A projekt hardcode-olva `"Lakások és Tulajok"`.
-2. **Snap-to-previous** — timer indításakor, ha az előző befejezett entry ≤ 15 percen belül ért véget, a timer ne a `now`-tól, hanem az előző entry végétől induljon. Inline toggle chip a Start gomb mellett.
+2. **Snap-to-previous** — timer indításakor, ha az előző befejezett entry ≤ 30 percen belül ért véget, a timer ne a `now`-tól, hanem az előző entry végétől induljon. Inline toggle chip a Start gomb mellett.
 
 ## HelpScout támogatás
 
@@ -100,7 +100,7 @@ A `attachManualEntrySubmit` signature megkap egy `buildPayload(fields)` callback
 - `startHsTimer { convId, ticketNumber, subject, customer }` — description összeállítás, projekt resolve `hsProjectName` (default `"Lakások és Tulajok"`) alapján, opcionális snap.
 - `stopAndStartHsTimer { convId, ticketNumber, subject, customer }` — stop után start, snap **nem** alkalmazódik (switch esetén a gap 0).
 - `createHsManualEntry { convId, ticketNumber, subject, customer, start, end, dayStart, dayEnd }` — overlap check + create, snap nem alkalmazódik.
-- `getSnapInfo` — visszaadja `{ snapTo: ISO | null, snapEnabled: boolean }` a UI chip-nek. `snapTo` a kiszámított snap idő, vagy `null` ha nincs snap-elhető entry (gap > 15 perc, vagy nincs entry).
+- `getSnapInfo` — visszaadja `{ snapTo: ISO | null, snapEnabled: boolean }` a UI chip-nek. `snapTo` a kiszámított snap idő, vagy `null` ha nincs snap-elhető entry (gap > 30 perc, vagy nincs entry).
 
 **External timer detection bővítés:**
 
@@ -161,7 +161,7 @@ Ha a Clockify projekt név később változna, nem kell kódot nyúlni.
 Amikor a user a **Start** gombra kattint (Linear vagy HS):
 
 1. Background megkérdezi a Clockify-t: mi a legutóbbi befejezett entry vége a user workspace-ében?
-2. Ha `now - lastEnd < 15 perc` **és** a `snapEnabled === true` → `body.start = lastEnd.toISOString()`
+2. Ha `now - lastEnd < 30 perc` **és** a `snapEnabled === true` → `body.start = lastEnd.toISOString()`
 3. Különben → `body.start = now.toISOString()`
 
 **Nem alkalmazódik:**
@@ -171,7 +171,7 @@ Amikor a user a **Start** gombra kattint (Linear vagy HS):
 
 ### Threshold / scope
 
-- **15 perc** hardcode-olva, nem állítható Options-ból (egyszerűség)
+- **30 perc** hardcode-olva, nem állítható Options-ból (egyszerűség)
 - **Bármely entry** a user workspace-ében számít előzőnek (nemcsak az extension által létrehozott). Így a Clockify UI-ban kézzel felvett entry-hez is snap-el.
 
 ### UI — inline chip a Start gomb mellett
@@ -187,7 +187,7 @@ Amikor a user a **Start** gombra kattint (Linear vagy HS):
 - A chip a timer gomb mellett jelenik meg (mind Linear floating header, mind Linear right-panel card, mind HS mindkét helyén).
 - Kattintásra toggle: `snapEnabled` `true ↔ false` (storage-ba perzisztálva, egy közös flag az egész extension-re).
 - Tooltip: `"Előző entry vége — kattintásra kikapcsolod"` / `"Kattintásra bekapcsolod a snap-et"`.
-- Ha nincs snap-elhető entry (>15 perc gap vagy nincs entry), a chip **rejtve**.
+- Ha nincs snap-elhető entry (>30 perc gap vagy nincs entry), a chip **rejtve**.
 
 **State refresh:**
 
@@ -216,7 +216,7 @@ async function getSnapInfo() {
 
   if (!latestEnd) return { snapTo: null, snapEnabled };
   const gap = now - latestEnd;
-  if (gap <= 0 || gap >= 15 * 60 * 1000) return { snapTo: null, snapEnabled };
+  if (gap <= 0 || gap >= 30 * 60 * 1000) return { snapTo: null, snapEnabled };
 
   return { snapTo: new Date(latestEnd).toISOString(), snapEnabled };
 }
@@ -241,7 +241,7 @@ Toggle-t csak a UI chip állítja, Options-ban nincs külön beállítás.
 ### Edge case-ek
 
 - **Futó timer van** (user oldja fel a tab-ot, nem állítja le): `getEntriesInRange` tartalmazza a futó entry-t is (`timeInterval.end === null`), de a snap-loop `continue`-zik rajta. Helyes.
-- **Több entry 15 percen belül**: mindegyik közül a legkésőbbi `end`-et vesszük.
+- **Több entry 30 percen belül**: mindegyik közül a legkésőbbi `end`-et vesszük.
 - **Race condition**: ha a user snap-elne, de közben valaki (pl. másik eszköz) indított egy timer-t — `startTimer` ugyanúgy működik, a Clockify eldönti hogy elfogadja-e. Nem kell külön kezelni.
 - **Jövőbeli entry** (theoretikusan ha az óra eltolódna): `gap <= 0` → nem snap-elünk. Helyes.
 
@@ -256,7 +256,7 @@ Toggle-t csak a UI chip állítja, Options-ban nincs külön beállítás.
 - HelpScout API használata (OAuth2 setup, auth flow) — ha később kellene tag-ek / status lekérése, külön spec
 - Mobile HelpScout UI — a HS web app nem igazán mobil-optimalizált
 - Más HS oldal-típusok (inbox lista, reports, settings) — csak `/conversation/*`
-- Snap threshold konfigurálhatóság — 15 perc hardcode
+- Snap threshold konfigurálhatóság — 30 perc hardcode
 - Snap-et külön toggle Linear-re és HS-re — egy közös flag
 
 ## Sikerkritériumok
@@ -267,5 +267,5 @@ Toggle-t csak a UI chip állítja, Options-ban nincs külön beállítás.
 - External timer detection felismeri a HS-eredetű timer-eket
 - Popup helyesen mutatja a HS timer-t
 - Snap chip megjelenik mindkét platform-on (Linear + HS), state perzisztens
-- Snap-nél a timer az előző entry végétől indul, ha ≤ 15 perc gap van
+- Snap-nél a timer az előző entry végétől indul, ha ≤ 30 perc gap van
 - Linear-es működés változatlan (regresszió nincs)

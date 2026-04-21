@@ -184,12 +184,20 @@ test('computeSnapTime: last entry ended 5 min ago → snap ISO', () => {
   assert.strictEqual(computeSnapTime(entries, now), '2026-04-21T10:35:00.000Z');
 });
 
-test('computeSnapTime: last entry ended 20 min ago → null', () => {
+test('computeSnapTime: last entry ended 40 min ago → null', () => {
+  const now = new Date('2026-04-21T11:00:00Z').getTime();
+  const entries = [
+    { timeInterval: { start: '2026-04-21T10:00:00Z', end: '2026-04-21T10:20:00Z' } },
+  ];
+  assert.strictEqual(computeSnapTime(entries, now), null);
+});
+
+test('computeSnapTime: last entry ended 20 min ago → snap ISO', () => {
   const now = new Date('2026-04-21T11:00:00Z').getTime();
   const entries = [
     { timeInterval: { start: '2026-04-21T10:00:00Z', end: '2026-04-21T10:40:00Z' } },
   ];
-  assert.strictEqual(computeSnapTime(entries, now), null);
+  assert.strictEqual(computeSnapTime(entries, now), '2026-04-21T10:40:00.000Z');
 });
 
 test('computeSnapTime: picks the latest end across multiple entries', () => {
@@ -210,8 +218,8 @@ test('computeSnapTime: end in the future → null (clock skew guard)', () => {
   assert.strictEqual(computeSnapTime(entries, now), null);
 });
 
-test('computeSnapTime: exactly 15 min gap → null (boundary exclusive)', () => {
-  const now = new Date('2026-04-21T10:45:00Z').getTime();
+test('computeSnapTime: exactly 30 min gap → null (boundary exclusive)', () => {
+  const now = new Date('2026-04-21T11:00:00Z').getTime();
   const entries = [
     { timeInterval: { start: '2026-04-21T10:00:00Z', end: '2026-04-21T10:30:00Z' } },
   ];

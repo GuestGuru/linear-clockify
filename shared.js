@@ -87,7 +87,7 @@
 
   // ─── Snap-to-previous time ──────────────────────────────────────────────
 
-  const SNAP_WINDOW_MS = 15 * 60 * 1000;
+  const SNAP_WINDOW_MS = 30 * 60 * 1000;
 
   function computeSnapTime(entries, nowMs) {
     if (!Array.isArray(entries) || entries.length === 0) return null;
