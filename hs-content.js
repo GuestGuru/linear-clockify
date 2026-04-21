@@ -103,6 +103,7 @@ async function handleHsButtonClick(event) {
   if (!ctx) return;
 
   const button = event?.currentTarget || document.getElementById('lc-hs-timer-button');
+  const originalText = button.textContent;
   button.disabled = true;
 
   try {
@@ -110,9 +111,11 @@ async function handleHsButtonClick(event) {
 
     if (activeTimer && activeTimer.source === 'hs' &&
         activeTimer.ticketNumber === ctx.ticketNumber && !activeTimer.external) {
+      button.textContent = '⏳ Stopping…';
       const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
       if (result.error) showHsError(result.error);
     } else if (activeTimer && !activeTimer.external) {
+      button.textContent = '⏳ Switching…';
       const result = await chrome.runtime.sendMessage({
         action: 'stopAndStartHsTimer',
         data: ctx,
@@ -120,6 +123,7 @@ async function handleHsButtonClick(event) {
       if (result.error) showHsError(result.error);
       if (result.warning) showHsWarning(result.warning);
     } else {
+      button.textContent = '⏳ Starting…';
       const result = await chrome.runtime.sendMessage({
         action: 'startHsTimer',
         data: ctx,
@@ -129,8 +133,12 @@ async function handleHsButtonClick(event) {
     }
   } catch (err) {
     showHsError(err.message);
+    button.textContent = originalText;
   } finally {
     button.disabled = false;
+    // updateHsButtonState (triggered by storage change) will overwrite textContent
+    // with the correct Stop/Start label. If it doesn't fire (e.g. error), leave
+    // originalText restored above.
   }
 }
 
@@ -189,13 +197,9 @@ function applyHsButtonState(button, elapsed, info, state, activeTimer) {
   }
 }
 
-async function updateHsButtonState() {
-  // Defensive: clear any running elapsed interval.
-  if (hsElapsedInterval) {
-    clearInterval(hsElapsedInterval);
-    hsElapsedInterval = null;
-  }
+let hsElapsedStartedAt = null;
 
+async function updateHsButtonState() {
   const ctx = getConversationContext();
   if (!ctx) return;
 
@@ -231,9 +235,21 @@ async function updateHsButtonState() {
   }
   buttons.forEach(({ button, elapsed, info }) => { applyHsButtonState(button, elapsed, info, state, activeTimer); });
 
-  if (state === 'stop') startHsElapsedCounter(activeTimer.startedAt);
-
-  if (state !== 'stop') {
+  // Only restart the elapsed counter when state transitions to 'stop' OR the
+  // timer's startedAt changes. Previously we cleared + restarted on every call,
+  // which meant the setInterval tick (1s) was always killed by the next
+  // updateHsButtonState (runs every ~100-500ms), so the counter never advanced.
+  if (state === 'stop') {
+    if (!hsElapsedInterval || hsElapsedStartedAt !== activeTimer.startedAt) {
+      hsElapsedStartedAt = activeTimer.startedAt;
+      startHsElapsedCounter(activeTimer.startedAt);
+    }
+  } else {
+    if (hsElapsedInterval) {
+      clearInterval(hsElapsedInterval);
+      hsElapsedInterval = null;
+      hsElapsedStartedAt = null;
+    }
     if (hsMainStartEditor) hsMainStartEditor.hide();
     if (hsCardStartEditor) hsCardStartEditor.hide();
   }
