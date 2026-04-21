@@ -406,8 +406,6 @@ function clearBadge() {
   chrome.action.setBadgeText({ text: '' });
 }
 
-const SNAP_LOOKBACK_MS = 30 * 60 * 1000;
-
 async function getSnapInfo() {
   const settings = await getSettings();
   const snapEnabled = settings.snapEnabled !== false; // default true
@@ -415,9 +413,12 @@ async function getSnapInfo() {
 
   try {
     const now = Date.now();
-    const windowStart = new Date(now - SNAP_LOOKBACK_MS).toISOString();
-    const windowEnd = new Date(now).toISOString();
-    const entries = await getEntriesInRange(windowStart, windowEnd);
+    const userId = await getUserId();
+    // Clockify's start/end range filter misbehaves on narrow ranges — fetch the
+    // latest 5 entries unfiltered and let computeSnapTime pick the latest end.
+    const entries = await clockifyFetch(
+      `/workspaces/${settings.workspaceId}/user/${userId}/time-entries?page-size=5`
+    );
     const snapTo = computeSnapTime(entries || [], now);
     return { snapTo, snapEnabled: true };
   } catch (err) {
