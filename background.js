@@ -305,6 +305,76 @@ async function startHsTimer({ ticketNumber, subject, customer }) {
   return { success: true, warning };
 }
 
+async function updateTimerStart(newStartISO) {
+  const settings = await getSettings();
+  const { activeTimer } = await chrome.storage.local.get('activeTimer');
+
+  if (!activeTimer?.timeEntryId) {
+    return { error: 'Nincs futó timer' };
+  }
+  if (activeTimer.external) {
+    return { error: 'Külső timer — nem szerkeszthető' };
+  }
+
+  const newStartMs = new Date(newStartISO).getTime();
+  if (!Number.isFinite(newStartMs)) {
+    return { error: 'Érvénytelen időpont' };
+  }
+  if (newStartMs > Date.now()) {
+    return { error: 'A kezdés nem lehet a jövőben' };
+  }
+
+  // Overlap check — exclude the timer being edited. Use a day-wide window
+  // that covers the new start (in case user rolls back across midnight).
+  const dayStr = new Date(newStartMs).toISOString().slice(0, 10); // YYYY-MM-DD (UTC day)
+  const [y, mo, d] = dayStr.split('-').map(Number);
+  const dayStart = new Date(Date.UTC(y, mo - 1, d - 1)).toISOString();
+  const dayEnd = new Date(Date.UTC(y, mo - 1, d + 1)).toISOString();
+  // newEnd for the overlap check = now (running timer extends to present)
+  const nowISO = new Date().toISOString();
+
+  const conflict = await findOverlap(newStartISO, nowISO, dayStart, dayEnd, activeTimer.timeEntryId);
+  if (conflict) {
+    const cs = new Date(conflict.timeInterval.start);
+    const ce = conflict.timeInterval.end ? new Date(conflict.timeInterval.end) : null;
+    const timeStr = ce ? `${formatHM(cs)}–${formatHM(ce)}` : `${formatHM(cs)}–(fut)`;
+    const desc = conflict.description || '(leírás nélkül)';
+    return { error: 'OVERLAP', conflictWith: `${desc} @ ${timeStr}` };
+  }
+
+  // PATCH the entry — Clockify requires the full time entry body for PUT,
+  // but PATCH on /time-entries/{id} supports partial updates on the start/end.
+  // Using PUT with the full entry is safer: fetch current entry, modify start, PUT back.
+  const current = await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries/${activeTimer.timeEntryId}`
+  );
+
+  const putBody = {
+    start: newStartISO,
+    billable: current.billable,
+    description: current.description,
+    projectId: current.projectId || undefined,
+    taskId: current.taskId || undefined,
+    tagIds: current.tagIds || undefined,
+    // end is omitted — Clockify keeps it null (running) if omitted on a running entry
+  };
+  if (current.timeInterval?.end) {
+    putBody.end = current.timeInterval.end;
+  }
+
+  await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries/${activeTimer.timeEntryId}`,
+    { method: 'PUT', body: JSON.stringify(putBody) }
+  );
+
+  // Update local storage
+  const updated = { ...activeTimer, startedAt: newStartISO };
+  await chrome.storage.local.set({ activeTimer: updated });
+  updateBadge(updated);
+
+  return { success: true };
+}
+
 async function stopTimer() {
   // Always clear local state, even if the API call fails
   await chrome.storage.local.remove('activeTimer');
@@ -449,6 +519,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         case 'stopTimer': {
           return await stopTimer();
+        }
+        case 'updateTimerStart': {
+          return await updateTimerStart(message.data.newStartISO);
         }
         case 'stopAndStartTimer': {
           await stopTimer();
