@@ -213,6 +213,136 @@
     return json.data;
   }
 
+  // ─── Linear: find-or-create issue for HS conversation ──────────────────
+
+  class OrphanIssueError extends Error {
+    constructor(issueKey, cause) {
+      super(`Orphan Linear issue created (attachment failed): ${issueKey}`);
+      this.name = 'OrphanIssueError';
+      this.issueKey = issueKey;
+      this.cause = cause;
+    }
+  }
+
+  async function linearFindOrCreateIssue({ ctx, config, fetchFn, retryDelayMs = 500 }) {
+    const {
+      canonicalHsUrl, subject, customer,
+      hsConvIdLong, hsConvIdShort, emails, hsCustomerId,
+    } = ctx;
+    const {
+      linearApiKey, linearDefaultTeamId, linearViewerId, linearInProgressStateId,
+    } = config;
+
+    if (!linearApiKey || !linearDefaultTeamId || !linearViewerId || !linearInProgressStateId) {
+      throw new Error('LINEAR_CONFIG_MISSING');
+    }
+
+    // 1. Lookup existing issue via attachment URL
+    const lookupQuery = `query($url: String!) {
+      attachmentsForURL(url: $url) {
+        nodes { issue { id identifier title } }
+      }
+    }`;
+    const lookupData = await linearRequest({
+      query: lookupQuery,
+      variables: { url: canonicalHsUrl },
+      apiKey: linearApiKey,
+      fetchFn,
+    });
+    const existing = lookupData?.attachmentsForURL?.nodes?.[0]?.issue;
+    if (existing) {
+      return {
+        issueKey: existing.identifier,
+        issueTitle: existing.title,
+        wasCreated: false,
+      };
+    }
+
+    // 2. Create issue
+    const titleSubject = subject || `HS #${hsConvIdShort}`;
+    const title = `${titleSubject} [HS: #${hsConvIdShort}]`;
+    const description = [
+      `**Partner:** ${customer || '—'}`,
+      '',
+      `[Helpscout conversation](${canonicalHsUrl})`,
+    ].join('\n');
+
+    const issueMutation = `mutation($input: IssueCreateInput!) {
+      issueCreate(input: $input) {
+        success
+        issue { id identifier title }
+      }
+    }`;
+    const issueData = await linearRequest({
+      query: issueMutation,
+      variables: {
+        input: {
+          teamId: linearDefaultTeamId,
+          title,
+          description,
+          stateId: linearInProgressStateId,
+          assigneeId: linearViewerId,
+        },
+      },
+      apiKey: linearApiKey,
+      fetchFn,
+    });
+    const issue = issueData?.issueCreate?.issue;
+    if (!issueData?.issueCreate?.success || !issue) {
+      throw new Error('Linear issueCreate failed (no success)');
+    }
+
+    // 3. Create attachment (with 1 retry)
+    const attachmentMutation = `mutation($input: AttachmentCreateInput!) {
+      attachmentCreate(input: $input) {
+        success
+        attachment { id }
+      }
+    }`;
+    const attachmentInput = {
+      issueId: issue.id,
+      url: canonicalHsUrl,
+      title: `Helpscout #${hsConvIdShort}`,
+      subtitle: customer || '',
+      metadata: {
+        source: 'linear-clockify-extension',
+        hsConvIdLong,
+        hsConvIdShort,
+        hsCustomerId: hsCustomerId || null,
+        hsCustomerEmails: emails || [],
+        hsCustomerName: customer || '',
+        createdAt: new Date().toISOString(),
+      },
+    };
+
+    let attachmentErr = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const attData = await linearRequest({
+          query: attachmentMutation,
+          variables: { input: attachmentInput },
+          apiKey: linearApiKey,
+          fetchFn,
+        });
+        if (attData?.attachmentCreate?.success) {
+          return {
+            issueKey: issue.identifier,
+            issueTitle: issue.title,
+            wasCreated: true,
+          };
+        }
+        attachmentErr = new Error('attachmentCreate returned no success');
+      } catch (err) {
+        attachmentErr = err;
+      }
+      if (attempt === 1 && retryDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+      }
+    }
+
+    throw new OrphanIssueError(issue.identifier, attachmentErr);
+  }
+
   // ─── Overlap detection ────────────────────────────────────────────────────
 
   function floorToMinuteMs(ms) {
@@ -602,6 +732,8 @@
     parseHsTitle,
     buildHsDescription,
     linearRequest,
+    linearFindOrCreateIssue,
+    OrphanIssueError,
     detectTimerSource,
     computeSnapTime,
     buildSnapChip,

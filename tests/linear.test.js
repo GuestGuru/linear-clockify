@@ -60,3 +60,160 @@ test('linearRequest throws on GraphQL-level errors', async () => {
     /Team not found/
   );
 });
+
+// ─── linearFindOrCreateIssue ────────────────────────────────────────────
+
+const { linearFindOrCreateIssue, OrphanIssueError } = require('../shared.js');
+
+function mkCtx(over = {}) {
+  return {
+    canonicalHsUrl: 'https://secure.helpscout.net/conversation/333/44',
+    subject: 'Subj', customer: 'Cust', ticketNumber: '44',
+    hsConvIdLong: '333', hsConvIdShort: '44',
+    emails: ['a@b.com'], hsCustomerId: '999',
+    ...over,
+  };
+}
+function mkConfig(over = {}) {
+  return {
+    linearApiKey: 'x', linearDefaultTeamId: 't-id',
+    linearViewerId: 'u-id', linearInProgressStateId: 's-id',
+    ...over,
+  };
+}
+
+test('linearFindOrCreateIssue returns existing issue when lookup succeeds', async () => {
+  let callCount = 0;
+  const fakeFetch = async (_url, opts) => {
+    callCount++;
+    const body = JSON.parse(opts.body);
+    if (body.query.includes('attachmentsForURL')) {
+      return {
+        ok: true, status: 200,
+        json: async () => ({
+          data: { attachmentsForURL: { nodes: [{ issue: { identifier: 'LIN-1234', title: 'Existing', id: 'iss-id' } }] } },
+        }),
+      };
+    }
+    throw new Error(`Unexpected query: ${body.query}`);
+  };
+  const out = await linearFindOrCreateIssue({
+    ctx: mkCtx(), config: mkConfig(), fetchFn: fakeFetch,
+  });
+  assert.strictEqual(out.issueKey, 'LIN-1234');
+  assert.strictEqual(out.issueTitle, 'Existing');
+  assert.strictEqual(out.wasCreated, false);
+  assert.strictEqual(callCount, 1);
+});
+
+test('linearFindOrCreateIssue creates issue + attachment when lookup empty', async () => {
+  const calls = [];
+  const fakeFetch = async (_url, opts) => {
+    const body = JSON.parse(opts.body);
+    calls.push(body.query.includes('attachmentsForURL') ? 'lookup'
+            : body.query.includes('issueCreate') ? 'issueCreate'
+            : body.query.includes('attachmentCreate') ? 'attachmentCreate'
+            : 'unknown');
+    if (body.query.includes('attachmentsForURL')) {
+      return { ok: true, status: 200, json: async () => ({ data: { attachmentsForURL: { nodes: [] } } }) };
+    }
+    if (body.query.includes('issueCreate')) {
+      return {
+        ok: true, status: 200,
+        json: async () => ({ data: { issueCreate: { success: true, issue: { id: 'iss-1', identifier: 'LIN-5678', title: 'New subject [HS: #44]' } } } }),
+      };
+    }
+    if (body.query.includes('attachmentCreate')) {
+      return {
+        ok: true, status: 200,
+        json: async () => ({ data: { attachmentCreate: { success: true, attachment: { id: 'att-1' } } } }),
+      };
+    }
+    throw new Error('Unexpected');
+  };
+  const out = await linearFindOrCreateIssue({
+    ctx: mkCtx({ subject: 'New subject', customer: 'New cust' }),
+    config: mkConfig(), fetchFn: fakeFetch,
+  });
+  assert.deepStrictEqual(calls, ['lookup', 'issueCreate', 'attachmentCreate']);
+  assert.strictEqual(out.issueKey, 'LIN-5678');
+  assert.strictEqual(out.wasCreated, true);
+});
+
+test('linearFindOrCreateIssue retries attachmentCreate once on failure', async () => {
+  const calls = [];
+  let attachmentAttempts = 0;
+  const fakeFetch = async (_url, opts) => {
+    const body = JSON.parse(opts.body);
+    if (body.query.includes('attachmentsForURL')) {
+      calls.push('lookup');
+      return { ok: true, status: 200, json: async () => ({ data: { attachmentsForURL: { nodes: [] } } }) };
+    }
+    if (body.query.includes('issueCreate')) {
+      calls.push('issueCreate');
+      return {
+        ok: true, status: 200,
+        json: async () => ({ data: { issueCreate: { success: true, issue: { id: 'iss-1', identifier: 'LIN-5678', title: 't' } } } }),
+      };
+    }
+    if (body.query.includes('attachmentCreate')) {
+      attachmentAttempts++;
+      calls.push(`attachmentCreate#${attachmentAttempts}`);
+      if (attachmentAttempts === 1) {
+        return { ok: false, status: 500, text: async () => 'server error' };
+      }
+      return {
+        ok: true, status: 200,
+        json: async () => ({ data: { attachmentCreate: { success: true, attachment: { id: 'att-1' } } } }),
+      };
+    }
+    throw new Error('Unexpected');
+  };
+  const out = await linearFindOrCreateIssue({
+    ctx: mkCtx({ emails: [], hsCustomerId: null }),
+    config: mkConfig(),
+    fetchFn: fakeFetch,
+    retryDelayMs: 0,
+  });
+  assert.deepStrictEqual(calls, ['lookup', 'issueCreate', 'attachmentCreate#1', 'attachmentCreate#2']);
+  assert.strictEqual(out.wasCreated, true);
+});
+
+test('linearFindOrCreateIssue throws OrphanIssueError on repeated attachmentCreate failure', async () => {
+  const fakeFetch = async (_url, opts) => {
+    const body = JSON.parse(opts.body);
+    if (body.query.includes('attachmentsForURL')) {
+      return { ok: true, status: 200, json: async () => ({ data: { attachmentsForURL: { nodes: [] } } }) };
+    }
+    if (body.query.includes('issueCreate')) {
+      return {
+        ok: true, status: 200,
+        json: async () => ({ data: { issueCreate: { success: true, issue: { id: 'iss-1', identifier: 'LIN-777', title: 't' } } } }),
+      };
+    }
+    if (body.query.includes('attachmentCreate')) {
+      return { ok: false, status: 500, text: async () => 'down' };
+    }
+    throw new Error('Unexpected');
+  };
+  await assert.rejects(
+    linearFindOrCreateIssue({
+      ctx: mkCtx({ emails: [], hsCustomerId: null }),
+      config: mkConfig(),
+      fetchFn: fakeFetch,
+      retryDelayMs: 0,
+    }),
+    (err) => err instanceof OrphanIssueError && err.issueKey === 'LIN-777'
+  );
+});
+
+test('linearFindOrCreateIssue throws LINEAR_CONFIG_MISSING when config incomplete', async () => {
+  await assert.rejects(
+    linearFindOrCreateIssue({
+      ctx: mkCtx(),
+      config: mkConfig({ linearDefaultTeamId: '' }),
+      fetchFn: () => { throw new Error('should not fetch'); },
+    }),
+    /LINEAR_CONFIG_MISSING/
+  );
+});
