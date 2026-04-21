@@ -1,10 +1,9 @@
 // Linear → Clockify Timer — Service Worker
 importScripts('shared.js');
 
-const { detectTimerSource, computeSnapTime, buildHsDescription, isOverlappingEntry } = self.LCShared;
+const { detectTimerSource, computeSnapTime, buildHsDescription, isOverlappingEntry, linearRequest } = self.LCShared;
 
 const CLOCKIFY_BASE = 'https://api.clockify.me/api/v1';
-const LINEAR_BASE = 'https://api.linear.app/graphql';
 const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
 const HS_PROJECT_DEFAULT = 'Lakások és Tulajok';
 
@@ -38,6 +37,8 @@ async function clockifyFetch(path, options = {}) {
     throw new Error('NO_API_KEY');
   }
   const url = `${CLOCKIFY_BASE}${path}`;
+  const method = options.method || 'GET';
+  console.log('[LC BG] clockify →', method, path);
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -46,6 +47,7 @@ async function clockifyFetch(path, options = {}) {
       ...options.headers,
     },
   });
+  console.log('[LC BG] clockify ←', method, path, response.status);
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`Clockify API ${response.status}: ${text}`);
@@ -93,30 +95,25 @@ async function getIssueDetails(teamKey, issueNumber) {
     }
   }`;
 
-  const response = await fetch(LINEAR_BASE, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': settings.linearApiKey,
-    },
-    body: JSON.stringify({ query, variables: { teamKey, number: Number(issueNumber) } }),
-  });
-
-  if (!response.ok) {
-    console.warn('[LC] Linear API error:', response.status);
+  console.log('[LC BG] linear → issue', teamKey, issueNumber);
+  try {
+    const data = await linearRequest({
+      query,
+      variables: { teamKey, number: Number(issueNumber) },
+      apiKey: settings.linearApiKey,
+      fetchFn: fetch,
+    });
+    const issue = data?.issues?.nodes?.[0];
+    if (!issue) return null;
+    const parts = [];
+    if (issue.project?.name) parts.push(issue.project.name);
+    if (issue.parent?.title) parts.push(issue.parent.title);
+    parts.push(issue.title);
+    return { title: parts.join(' > ') };
+  } catch (err) {
+    console.warn('[LC BG] Linear API error:', err.message);
     return null;
   }
-
-  const json = await response.json();
-  const issue = json.data?.issues?.nodes?.[0];
-  if (!issue) return null;
-
-  const parts = [];
-  if (issue.project?.name) parts.push(issue.project.name);
-  if (issue.parent?.title) parts.push(issue.parent.title);
-  parts.push(issue.title);
-
-  return { title: parts.join(' > ') };
 }
 
 async function getEntriesInRange(dayStartISO, dayEndISO) {
@@ -472,24 +469,37 @@ function clearBadge() {
   chrome.action.setBadgeText({ text: '' });
 }
 
-async function getSnapInfo() {
-  const settings = await getSettings();
-  const snapEnabled = settings.snapEnabled !== false; // default true
-  if (!snapEnabled) return { snapTo: null, snapEnabled: false };
+// In-flight dedupe: concurrent callers (header chip + card chip, possibly
+// across tabs) share a single Clockify fetch instead of fanning out.
+let snapInfoInFlight = null;
 
+async function getSnapInfo() {
+  if (snapInfoInFlight) return snapInfoInFlight;
+  snapInfoInFlight = (async () => {
+    const settings = await getSettings();
+    const snapEnabled = settings.snapEnabled !== false; // default true
+    if (!snapEnabled) return { snapTo: null, snapEnabled: false };
+
+    try {
+      const now = Date.now();
+      const userId = await getUserId();
+      // Clockify's start/end range filter misbehaves on narrow ranges — fetch
+      // the latest 5 entries unfiltered and let computeSnapTime pick the
+      // latest end.
+      const entries = await clockifyFetch(
+        `/workspaces/${settings.workspaceId}/user/${userId}/time-entries?page-size=5`
+      );
+      const snapTo = computeSnapTime(entries || [], now);
+      return { snapTo, snapEnabled: true };
+    } catch (err) {
+      console.warn('[LC] getSnapInfo failed:', err.message);
+      return { snapTo: null, snapEnabled: true };
+    }
+  })();
   try {
-    const now = Date.now();
-    const userId = await getUserId();
-    // Clockify's start/end range filter misbehaves on narrow ranges — fetch the
-    // latest 5 entries unfiltered and let computeSnapTime pick the latest end.
-    const entries = await clockifyFetch(
-      `/workspaces/${settings.workspaceId}/user/${userId}/time-entries?page-size=5`
-    );
-    const snapTo = computeSnapTime(entries || [], now);
-    return { snapTo, snapEnabled: true };
-  } catch (err) {
-    console.warn('[LC] getSnapInfo failed:', err.message);
-    return { snapTo: null, snapEnabled: true };
+    return await snapInfoInFlight;
+  } finally {
+    snapInfoInFlight = null;
   }
 }
 
@@ -509,6 +519,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   let retried = false;
+
+  console.log('[LC BG] →', message.action, message.data ? Object.keys(message.data) : '');
 
   const handler = async () => {
     try {
@@ -579,7 +591,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   };
 
-  handler().then(sendResponse);
+  handler().then((result) => {
+    console.log('[LC BG] ←', message.action, result);
+    sendResponse(result);
+  });
   return true;
 });
 

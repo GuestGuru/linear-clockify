@@ -184,6 +184,35 @@
     return null;
   }
 
+  // ─── Linear API wrapper ──────────────────────────────────────────────────
+
+  async function linearRequest({ query, variables, apiKey, fetchFn }) {
+    if (!apiKey) throw new Error('LINEAR_NO_API_KEY');
+    const response = await fetchFn('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': apiKey,
+      },
+      body: JSON.stringify({ query, variables: variables || {} }),
+    });
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('LINEAR_AUTH');
+    }
+    if (response.status === 429) {
+      throw new Error('LINEAR_RATE_LIMIT');
+    }
+    if (!response.ok) {
+      const body = typeof response.text === 'function' ? await response.text() : '';
+      throw new Error(`Linear API ${response.status}: ${body}`);
+    }
+    const json = await response.json();
+    if (json.errors?.length) {
+      throw new Error(json.errors[0].message || 'Linear GraphQL error');
+    }
+    return json.data;
+  }
+
   // ─── Overlap detection ────────────────────────────────────────────────────
 
   function floorToMinuteMs(ms) {
@@ -572,6 +601,7 @@
     parseHsCustomerIdFromDom,
     parseHsTitle,
     buildHsDescription,
+    linearRequest,
     detectTimerSource,
     computeSnapTime,
     buildSnapChip,
