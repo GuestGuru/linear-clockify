@@ -423,3 +423,15 @@ test('parseHsCustomerIdFromDom handles null/undefined root', () => {
   assert.strictEqual(parseHsCustomerIdFromDom(null), null);
   assert.strictEqual(parseHsCustomerIdFromDom(undefined), null);
 });
+
+test('detectTimerSource: HS-sourced timers with [LIN-xxx] prefix are classified as linear — content script relies on activeTimer.source for HS identity', () => {
+  // A HS-ből indított timer description-je [LIN-xxx] formátumú, de az
+  // activeTimer.source = "hs" a chrome.storage.local-ban — a content script
+  // annak alapján dönt, nem a description-ből. detectTimerSource-ot csak
+  // külső (más-gépen indított) timerekre használjuk, ahol a linear
+  // klasszifikáció elfogadható fallback.
+  const detected = detectTimerSource('[LIN-1234] Re: subject — customer');
+  assert.strictEqual(detected.source, 'linear');
+  assert.strictEqual(detected.issueKey, 'LIN-1234');
+  assert.strictEqual(detected.teamKey, 'LIN');
+});
