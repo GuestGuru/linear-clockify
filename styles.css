@@ -252,3 +252,29 @@
     color: #555;
   }
 }
+
+.lc-snap-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  margin-left: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+}
+.lc-snap-chip.lc-snap-chip-active {
+  background: #e0f2fe;
+  color: #075985;
+  border-color: #bae6fd;
+}
+.lc-snap-chip.lc-snap-chip-off {
+  background: #f3f4f6;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+.lc-snap-chip:hover { filter: brightness(0.97); }

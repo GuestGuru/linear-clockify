@@ -161,6 +161,61 @@
     return link;
   }
 
+  // ─── Snap chip UI ────────────────────────────────────────────────────────
+
+  function formatSnapLabel(snapISO) {
+    const d = new Date(snapISO);
+    return `↶ ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+
+  function buildSnapChip() {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'lc-snap-chip';
+    chip.style.display = 'none';
+    chip.setAttribute('aria-pressed', 'true');
+
+    function render({ snapTo, snapEnabled }) {
+      if (!snapEnabled) {
+        chip.style.display = 'inline-flex';
+        chip.textContent = '↶ off';
+        chip.classList.remove('lc-snap-chip-active');
+        chip.classList.add('lc-snap-chip-off');
+        chip.title = 'Kattintásra bekapcsolod a snap-et';
+        chip.setAttribute('aria-pressed', 'false');
+        return;
+      }
+      if (!snapTo) {
+        chip.style.display = 'none';
+        return;
+      }
+      chip.style.display = 'inline-flex';
+      chip.textContent = formatSnapLabel(snapTo);
+      chip.classList.add('lc-snap-chip-active');
+      chip.classList.remove('lc-snap-chip-off');
+      chip.title = 'Előző entry vége — kattintásra kikapcsolod';
+      chip.setAttribute('aria-pressed', 'true');
+    }
+
+    async function refresh() {
+      try {
+        const info = await chrome.runtime.sendMessage({ action: 'getSnapInfo' });
+        render(info || { snapTo: null, snapEnabled: true });
+      } catch (err) {
+        chip.style.display = 'none';
+      }
+    }
+
+    chip.addEventListener('click', async () => {
+      const isOff = chip.classList.contains('lc-snap-chip-off');
+      const next = isOff; // if currently off, next is true (enable); if currently active, next is false
+      await chrome.runtime.sendMessage({ action: 'setSnapEnabled', data: { enabled: next } });
+      await refresh();
+    });
+
+    return { chip, refresh, render };
+  }
+
   // ─── Manual entry form builder ───────────────────────────────────────────
 
   function buildManualEntryForm() {
@@ -332,6 +387,7 @@
     buildHsDescription,
     detectTimerSource,
     computeSnapTime,
+    buildSnapChip,
   };
 
   global.LCShared = api;
