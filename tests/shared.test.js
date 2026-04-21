@@ -63,3 +63,69 @@ test('dayBoundsISO returns midnight-midnight', () => {
   assert.strictEqual(s.getDate(), 21);
   assert.strictEqual(e.getDate(), 22);
 });
+
+// ─── HelpScout parsing ──────────────────────────────────────────────────
+
+const { parseHsUrl, parseHsTitle, buildHsDescription } = require('../shared.js');
+
+test('parseHsUrl: valid conversation URL', () => {
+  const r = parseHsUrl('/conversation/3259965890/43152');
+  assert.deepStrictEqual(r, { convId: '3259965890', ticketNumber: '43152' });
+});
+
+test('parseHsUrl: URL with viewId query is parsed from pathname only', () => {
+  const r = parseHsUrl('/conversation/3259965890/43152');
+  assert.ok(r);
+  assert.strictEqual(r.ticketNumber, '43152');
+});
+
+test('parseHsUrl: non-conversation path', () => {
+  assert.strictEqual(parseHsUrl('/inbox/8514303'), null);
+  assert.strictEqual(parseHsUrl('/'), null);
+  assert.strictEqual(parseHsUrl(''), null);
+});
+
+test('parseHsTitle: standard format', () => {
+  const r = parseHsTitle('#43152 Re: Népszínház 26. lemondás - Tímea Kovács');
+  assert.deepStrictEqual(r, {
+    ticketNumber: '43152',
+    subject: 'Re: Népszínház 26. lemondás',
+    customer: 'Tímea Kovács',
+  });
+});
+
+test('parseHsTitle: subject contains dashes — split on last " - "', () => {
+  const r = parseHsTitle('#100 A - B - C - Customer Name');
+  assert.deepStrictEqual(r, {
+    ticketNumber: '100',
+    subject: 'A - B - C',
+    customer: 'Customer Name',
+  });
+});
+
+test('parseHsTitle: no customer (no " - ")', () => {
+  assert.strictEqual(parseHsTitle('#43152 Subject only'), null);
+});
+
+test('parseHsTitle: no # prefix', () => {
+  assert.strictEqual(parseHsTitle('Random page title'), null);
+});
+
+test('buildHsDescription: full info', () => {
+  const d = buildHsDescription({
+    ticketNumber: '43152',
+    subject: 'Re: Népszínház 26. lemondás',
+    customer: 'Tímea Kovács',
+  });
+  assert.strictEqual(d, '[HS: #43152] Re: Népszínház 26. lemondás - Tímea Kovács');
+});
+
+test('buildHsDescription: missing subject/customer → prefix only', () => {
+  assert.strictEqual(buildHsDescription({ ticketNumber: '43152', subject: '', customer: '' }),
+    '[HS: #43152]');
+});
+
+test('buildHsDescription: subject only', () => {
+  assert.strictEqual(buildHsDescription({ ticketNumber: '43152', subject: 'Foo', customer: '' }),
+    '[HS: #43152] Foo');
+});

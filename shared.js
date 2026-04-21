@@ -53,6 +53,38 @@
     return { start: start.toISOString(), end: end.toISOString() };
   }
 
+  // ─── HelpScout parsing ──────────────────────────────────────────────────
+
+  function parseHsUrl(pathname) {
+    const str = String(pathname || '');
+    const m = str.match(/^\/conversation\/(\d+)\/(\d+)\/?$/);
+    if (!m) return null;
+    return { convId: m[1], ticketNumber: m[2] };
+  }
+
+  function parseHsTitle(title) {
+    const str = String(title || '').trim();
+    const headMatch = str.match(/^#(\d+)\s+(.+)$/);
+    if (!headMatch) return null;
+    const ticketNumber = headMatch[1];
+    const rest = headMatch[2];
+
+    const lastSep = rest.lastIndexOf(' - ');
+    if (lastSep === -1) return null;
+
+    const subject = rest.slice(0, lastSep).trim();
+    const customer = rest.slice(lastSep + 3).trim();
+    if (!subject || !customer) return null;
+
+    return { ticketNumber, subject, customer };
+  }
+
+  function buildHsDescription({ ticketNumber, subject, customer }) {
+    const prefix = `[HS: #${ticketNumber}]`;
+    const tail = [subject, customer].filter((s) => s && String(s).trim()).join(' - ');
+    return tail ? `${prefix} ${tail}` : prefix;
+  }
+
   // ─── Status helpers ──────────────────────────────────────────────────────
 
   function setStatus(el, kind, text) {
@@ -244,6 +276,9 @@
     createSettingsLink,
     buildManualEntryForm,
     attachManualEntrySubmit,
+    parseHsUrl,
+    parseHsTitle,
+    buildHsDescription,
   };
 
   global.LCShared = api;
