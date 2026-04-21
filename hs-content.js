@@ -260,19 +260,18 @@ function startHsElapsedCounter(startedAt) {
 }
 
 function findHsSidebarInsertion() {
-  // The right sidebar in HelpScout has an "infoboxes-wrapper" container that
-  // holds all customer/contact info cards. Prepend our card to it so it shows
-  // at the top of the right panel. Contact properties section is a fallback
-  // that sits inside the same sidebar.
-  const selectors = [
-    '[data-testid="infoboxes-wrapper"]',
-    '[data-testid="contact-properties-section"]',
-  ];
-  for (const sel of selectors) {
-    const el = document.querySelector(sel);
-    if (el && el.offsetParent !== null) return el;
-  }
-  return null;
+  // The right sidebar contains one or more CollapsablePanel elements (e.g.,
+  // "Conversations"). We insert OUR card AFTER the last visible one. Returns
+  // { parent, afterNode } so the caller can insertBefore(card, afterNode.nextSibling).
+  const panels = Array.from(document.querySelectorAll('[data-testid="CollapsablePanel"]'))
+    .filter((p) => p.offsetParent !== null);
+  if (panels.length === 0) return null;
+
+  // Prefer the Conversations panel if present (visually the bottom of the sidebar
+  // in our observed layouts); otherwise fall back to the last visible panel.
+  const conversations = panels.find((p) => p.classList.contains('is-conversations-panel'));
+  const target = conversations || panels[panels.length - 1];
+  return { parent: target.parentElement, afterNode: target };
 }
 
 function createHsRightPanelCard() {
@@ -366,7 +365,8 @@ function createHsRightPanelCard() {
   card.appendChild(manualTitle);
   card.appendChild(form);
 
-  insertion.insertBefore(card, insertion.firstChild);
+  // insertion = { parent, afterNode } — place card right after afterNode
+  insertion.parent.insertBefore(card, insertion.afterNode.nextSibling);
 
   button.addEventListener('click', handleHsButtonClick);
   hsCardSnapChip.refresh();
