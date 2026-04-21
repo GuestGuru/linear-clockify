@@ -1,4 +1,7 @@
 // Linear → Clockify Timer — Service Worker
+importScripts('shared.js');
+
+const { detectTimerSource, computeSnapTime, buildHsDescription } = self.LCShared;
 
 const CLOCKIFY_BASE = 'https://api.clockify.me/api/v1';
 const LINEAR_BASE = 'https://api.linear.app/graphql';
