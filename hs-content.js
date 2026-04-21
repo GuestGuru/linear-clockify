@@ -259,44 +259,12 @@ function startHsElapsedCounter(startedAt) {
   hsElapsedInterval = setInterval(update, 1000);
 }
 
-function findHsSidebarInsertion() {
-  // The right sidebar has a .simplebar-content scroll container whose direct
-  // children include: avatar-toggle, ProfilePanelWrapper, (optional) CollapsablePanel.
-  // We try anchors in strict priority order — CustomerName sits INSIDE the
-  // ProfilePanel, so walking up gives us ProfilePanelWrapper (the block holding
-  // name + email + properties). Card inserted AFTER that → lands between the
-  // customer-info block and the Conversations panel.
-  const anchorSelectors = [
-    '[data-cy="Sidebar.CustomerName"]',
-    '[data-testid="contact-properties-section"]',
-  ];
-  let anchor = null;
-  for (const sel of anchorSelectors) {
-    anchor = document.querySelector(sel);
-    if (anchor) break;
-  }
-  if (!anchor) return null;
-
-  const scroll = anchor.closest('.simplebar-content') || anchor.closest('.simplebar-content-wrapper');
-  if (!scroll || scroll.offsetParent === null) return null;
-
-  let topChild = anchor;
-  while (topChild.parentElement && topChild.parentElement !== scroll) {
-    topChild = topChild.parentElement;
-  }
-  if (topChild.parentElement !== scroll) return null;
-  return { parent: scroll, afterNode: topChild };
-}
-
 function createHsRightPanelCard() {
   const existing = document.getElementById(HS_CARD_ID);
   if (existing) existing.remove();
 
   const ctx = getConversationContext();
   if (!ctx) return;
-
-  const insertion = findHsSidebarInsertion();
-  if (!insertion) return;
 
   const card = document.createElement('div');
   card.id = HS_CARD_ID;
@@ -379,12 +347,8 @@ function createHsRightPanelCard() {
   card.appendChild(manualTitle);
   card.appendChild(form);
 
-  // insertion = { parent, afterNode } — afterNode null means prepend
-  if (insertion.afterNode) {
-    insertion.parent.insertBefore(card, insertion.afterNode.nextSibling);
-  } else {
-    insertion.parent.insertBefore(card, insertion.parent.firstChild);
-  }
+  // Append to body with position:fixed so HS's dynamic DOM can't remove us.
+  document.body.appendChild(card);
 
   button.addEventListener('click', handleHsButtonClick);
   hsCardSnapChip.refresh();

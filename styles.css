@@ -326,16 +326,23 @@
 }
 
 #lc-hs-right-card {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  z-index: 999999;
   display: block;
   box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  margin: 10px 0;
-  padding: 10px;
+  width: 300px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  padding: 12px;
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
+  color: #111827;
 }
 #lc-hs-right-card .lc-card-title {
   font-weight: 600;
