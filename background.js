@@ -6,14 +6,16 @@ const { detectTimerSource, computeSnapTime, buildHsDescription } = self.LCShared
 const CLOCKIFY_BASE = 'https://api.clockify.me/api/v1';
 const LINEAR_BASE = 'https://api.linear.app/graphql';
 const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
+const HS_PROJECT_DEFAULT = 'Lakások és Tulajok';
 
 async function getSettings() {
   const { settings } = await chrome.storage.local.get('settings');
-  return settings || {
+  const defaults = {
     apiKey: '',
     workspaceId: DEFAULT_WORKSPACE_ID,
     autoStop: false,
     snapEnabled: true,
+    hsProjectName: HS_PROJECT_DEFAULT,
     teamMapping: {
       GG: 'Cég működése',
       MAN: 'Management',
@@ -27,6 +29,7 @@ async function getSettings() {
       LM: 'Lakásmenedzserek',
     },
   };
+  return { ...defaults, ...(settings || {}) };
 }
 
 async function clockifyFetch(path, options = {}) {
@@ -188,6 +191,44 @@ async function createManualEntry(issueKey, issueTitle, teamKey, startISO, endISO
   return { success: true, warning };
 }
 
+async function createHsManualEntry({
+  ticketNumber, subject, customer,
+  startISO, endISO, dayStartISO, dayEndISO,
+}) {
+  const settings = await getSettings();
+
+  const conflict = await findOverlap(startISO, endISO, dayStartISO, dayEndISO);
+  if (conflict) {
+    const cs = new Date(conflict.timeInterval.start);
+    const ce = conflict.timeInterval.end ? new Date(conflict.timeInterval.end) : null;
+    const timeStr = ce ? `${formatHM(cs)}–${formatHM(ce)}` : `${formatHM(cs)}–(fut)`;
+    const desc = conflict.description || '(leírás nélkül)';
+    return { error: 'OVERLAP', conflictWith: `${desc} @ ${timeStr}` };
+  }
+
+  const projectName = settings.hsProjectName || HS_PROJECT_DEFAULT;
+  let projectId = null;
+  let warning = null;
+  if (projectName) {
+    projectId = await resolveProjectId(projectName);
+    if (!projectId) warning = `Clockify projekt nem található: ${projectName}`;
+  }
+
+  const body = {
+    start: startISO,
+    end: endISO,
+    description: buildHsDescription({ ticketNumber, subject, customer }),
+  };
+  if (projectId) body.projectId = projectId;
+
+  await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries`,
+    { method: 'POST', body: JSON.stringify(body) }
+  );
+
+  return { success: true, warning };
+}
+
 async function startTimer(issueKey, issueTitle, teamKey) {
   const settings = await getSettings();
   const projectName = settings.teamMapping[teamKey];
@@ -223,6 +264,43 @@ async function startTimer(issueKey, issueTitle, teamKey) {
     teamKey,
     issueTitle,
     projectName: projectName || null,
+    startedAt: body.start,
+  };
+  await chrome.storage.local.set({ activeTimer });
+  updateBadge(activeTimer);
+
+  return { success: true, warning };
+}
+
+async function startHsTimer({ ticketNumber, subject, customer }) {
+  const settings = await getSettings();
+  const projectName = settings.hsProjectName || HS_PROJECT_DEFAULT;
+
+  let projectId = null;
+  let warning = null;
+  if (projectName) {
+    projectId = await resolveProjectId(projectName);
+    if (!projectId) warning = `Clockify projekt nem található: ${projectName}`;
+  }
+
+  const body = {
+    start: await resolveStartTime(),
+    description: buildHsDescription({ ticketNumber, subject, customer }),
+  };
+  if (projectId) body.projectId = projectId;
+
+  const entry = await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries`,
+    { method: 'POST', body: JSON.stringify(body) }
+  );
+
+  const issueTitle = [subject, customer].filter(Boolean).join(' - ') || `#${ticketNumber}`;
+  const activeTimer = {
+    timeEntryId: entry.id,
+    source: 'hs',
+    ticketNumber,
+    issueTitle,
+    projectName,
     startedAt: body.start,
   };
   await chrome.storage.local.set({ activeTimer });
@@ -383,6 +461,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'createManualEntry': {
           const { issueKey, issueTitle, teamKey, start, end, dayStart, dayEnd } = message.data;
           return await createManualEntry(issueKey, issueTitle, teamKey, start, end, dayStart, dayEnd);
+        }
+        case 'startHsTimer': {
+          return await startHsTimer(message.data);
+        }
+        case 'stopAndStartHsTimer': {
+          await stopTimer();
+          return await startHsTimer(message.data);
+        }
+        case 'createHsManualEntry': {
+          return await createHsManualEntry(message.data);
         }
         case 'getIssueDetails': {
           const { teamKey, issueNumber } = message.data;
