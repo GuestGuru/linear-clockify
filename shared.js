@@ -62,6 +62,19 @@
     return { convId: m[1], ticketNumber: m[2] };
   }
 
+  function canonicalizeHsUrl(raw) {
+    const str = String(raw || '').trim();
+    if (!str) return null;
+    try {
+      const u = new URL(str);
+      u.search = '';
+      u.hash = '';
+      return u.toString();
+    } catch {
+      return null;
+    }
+  }
+
   function parseHsTitle(title) {
     const str = String(title || '').trim();
     const headMatch = str.match(/^#(\d+)\s+(.+)$/);
@@ -218,11 +231,16 @@
     }
 
     async function refresh() {
+      // Preserve previous visible state on error / undefined response.
+      // Transient service-worker restarts can make chrome.runtime.sendMessage
+      // resolve with undefined, and the !snapTo branch used to hide an
+      // already-rendered chip without clearing its text/classes — leaving
+      // stale active markup with display:none. Only re-render on valid input.
       try {
         const info = await chrome.runtime.sendMessage({ action: 'getSnapInfo' });
-        render(info || { snapTo: null, snapEnabled: true });
-      } catch (err) {
-        chip.style.display = 'none';
+        if (info && typeof info === 'object') render(info);
+      } catch {
+        // keep last known good state
       }
     }
 
@@ -514,6 +532,7 @@
     buildManualEntryForm,
     attachManualEntrySubmit,
     parseHsUrl,
+    canonicalizeHsUrl,
     parseHsTitle,
     buildHsDescription,
     detectTimerSource,

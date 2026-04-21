@@ -283,3 +283,35 @@ test('isOverlappingEntry: excludeId different → entry IS considered', () => {
   const overlap = isOverlappingEntry(entry, '2026-04-21T08:00:00Z', '2026-04-21T09:30:00Z', nowMs, 'e2');
   assert.strictEqual(overlap, true);
 });
+
+// ─── canonicalizeHsUrl ──────────────────────────────────────────────────
+
+const { canonicalizeHsUrl } = require('../shared.js');
+
+test('canonicalizeHsUrl strips viewId query', () => {
+  assert.strictEqual(
+    canonicalizeHsUrl('https://secure.helpscout.net/conversation/3297862965/44477?viewId=8514301'),
+    'https://secure.helpscout.net/conversation/3297862965/44477'
+  );
+});
+
+test('canonicalizeHsUrl strips fragment and extra query params', () => {
+  assert.strictEqual(
+    canonicalizeHsUrl('https://secure.helpscout.net/conversation/3297862965/44477?viewId=1&foo=bar#thread-123'),
+    'https://secure.helpscout.net/conversation/3297862965/44477'
+  );
+});
+
+test('canonicalizeHsUrl preserves trailing slash if present', () => {
+  assert.strictEqual(
+    canonicalizeHsUrl('https://secure.helpscout.net/conversation/3297862965/44477/'),
+    'https://secure.helpscout.net/conversation/3297862965/44477/'
+  );
+});
+
+test('canonicalizeHsUrl returns null on invalid input', () => {
+  assert.strictEqual(canonicalizeHsUrl(''), null);
+  assert.strictEqual(canonicalizeHsUrl('not-a-url'), null);
+  assert.strictEqual(canonicalizeHsUrl(null), null);
+  assert.strictEqual(canonicalizeHsUrl(undefined), null);
+});
