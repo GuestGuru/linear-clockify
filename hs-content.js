@@ -29,21 +29,11 @@ function getConversationContext() {
 }
 
 function findHsHeaderInsertion() {
-  // Strategy: find the element holding the conversation subject heading, then
-  // insert our UI as a sibling so it appears near the #ticketNumber line.
-  const selectors = [
-    '[data-cy="conversation-subject"]',
-    '[data-cy="dashboardTitle"]',
-    'h1',
-    'h2',
-  ];
-  for (const sel of selectors) {
-    const el = document.querySelector(sel);
-    if (el && el.offsetParent !== null) {
-      return el.parentElement || el;
-    }
-  }
-  return document.body;
+  // The conversation header bar (top of the conversation view) wraps the
+  // subject and action buttons. We append our container as its child.
+  const header = document.querySelector('[data-testid="conversation-header"]');
+  if (header && header.offsetParent !== null) return header;
+  return null;
 }
 
 function createHsTimerButton() {
@@ -270,12 +260,13 @@ function startHsElapsedCounter(startedAt) {
 }
 
 function findHsSidebarInsertion() {
+  // The right sidebar in HelpScout has an "infoboxes-wrapper" container that
+  // holds all customer/contact info cards. Prepend our card to it so it shows
+  // at the top of the right panel. Contact properties section is a fallback
+  // that sits inside the same sidebar.
   const selectors = [
-    '[data-cy="conversation-properties"]',
-    '[data-cy="sidebar"]',
-    '.sidebar',
-    '.conversation-sidebar',
-    'aside',
+    '[data-testid="infoboxes-wrapper"]',
+    '[data-testid="contact-properties-section"]',
   ];
   for (const sel of selectors) {
     const el = document.querySelector(sel);
@@ -393,34 +384,23 @@ function tryInsertHsUI() {
   return Boolean(container);
 }
 
-let hsInitObserver = null;
+// Keep-alive check: HS re-renders its conversation view on navigation or
+// other interactions. If our UI goes missing, re-insert it. Running every
+// second is cheap (two getElementById checks) and avoids the fragility of
+// a one-shot MutationObserver that disconnects after first success.
+let hsKeepAliveInterval = null;
 
-function waitForHsDomAndInit() {
-  if (hsInitObserver) {
-    hsInitObserver.disconnect();
-    hsInitObserver = null;
-  }
-  if (tryInsertHsUI()) return;
+function ensureHsUI() {
+  if (!parseHsUrl(window.location.pathname)) return;
+  const container = document.getElementById(HS_BUTTON_CONTAINER_ID);
+  const card = document.getElementById(HS_CARD_ID);
+  if (container && card) return;
+  tryInsertHsUI();
+}
 
-  let debounce = null;
-  hsInitObserver = new MutationObserver(() => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => {
-      if (tryInsertHsUI()) {
-        hsInitObserver.disconnect();
-        hsInitObserver = null;
-      }
-    }, 200);
-  });
-  hsInitObserver.observe(document.body, { childList: true, subtree: true });
-
-  // Safety: stop watching after 30s
-  setTimeout(() => {
-    if (hsInitObserver) {
-      hsInitObserver.disconnect();
-      hsInitObserver = null;
-    }
-  }, 30000);
+function startHsKeepAlive() {
+  if (hsKeepAliveInterval) return;
+  hsKeepAliveInterval = setInterval(ensureHsUI, 1000);
 }
 
 let hsLastUrl = window.location.href;
@@ -428,7 +408,7 @@ const hsUrlObserver = new MutationObserver(() => {
   if (window.location.href !== hsLastUrl) {
     hsLastUrl = window.location.href;
     if (parseHsUrl(window.location.pathname)) {
-      waitForHsDomAndInit();
+      ensureHsUI();
     }
   }
 });
@@ -441,7 +421,8 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 if (parseHsUrl(window.location.pathname)) {
-  waitForHsDomAndInit();
+  ensureHsUI();
+  startHsKeepAlive();
 }
 
 console.log('[LC HS] content script initialized');
