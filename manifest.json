@@ -7,7 +7,8 @@
   "host_permissions": [
     "https://api.clockify.me/*",
     "https://api.linear.app/*",
-    "https://linear.app/gghq/*"
+    "https://linear.app/gghq/*",
+    "https://secure.helpscout.net/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -16,6 +17,12 @@
     {
       "matches": ["https://linear.app/*"],
       "js": ["shared.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://secure.helpscout.net/conversation/*"],
+      "js": ["shared.js", "hs-content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }
