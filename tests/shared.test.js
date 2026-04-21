@@ -111,8 +111,37 @@ test('parseHsTitle: no # prefix', () => {
   assert.strictEqual(parseHsTitle('Random page title'), null);
 });
 
-test('buildHsDescription: full info', () => {
+test('buildHsDescription with Linear identifier uses [LIN-xxx] prefix', () => {
   const d = buildHsDescription({
+    issueKey: 'LIN-1234',
+    subject: 'Re: Népszínház 26. lemondás',
+    customer: 'Tímea Kovács',
+  });
+  assert.strictEqual(d, '[LIN-1234] Re: Népszínház 26. lemondás — Tímea Kovács');
+});
+
+test('buildHsDescription without customer uses no trailing em-dash', () => {
+  const d = buildHsDescription({
+    issueKey: 'LIN-1234',
+    subject: 'Test subject',
+    customer: '',
+  });
+  assert.strictEqual(d, '[LIN-1234] Test subject');
+});
+
+test('buildHsDescription without subject falls back to HS ticket number', () => {
+  const d = buildHsDescription({
+    issueKey: 'LIN-1234',
+    ticketNumber: '43152',
+    subject: '',
+    customer: 'Tímea Kovács',
+  });
+  assert.strictEqual(d, '[LIN-1234] HS #43152 — Tímea Kovács');
+});
+
+test('buildHsDescription HS-fallback (no issueKey): full info', () => {
+  const d = buildHsDescription({
+    issueKey: null,
     ticketNumber: '43152',
     subject: 'Re: Népszínház 26. lemondás',
     customer: 'Tímea Kovács',
@@ -120,13 +149,13 @@ test('buildHsDescription: full info', () => {
   assert.strictEqual(d, '[HS: #43152] Re: Népszínház 26. lemondás - Tímea Kovács');
 });
 
-test('buildHsDescription: missing subject/customer → prefix only', () => {
-  assert.strictEqual(buildHsDescription({ ticketNumber: '43152', subject: '', customer: '' }),
+test('buildHsDescription HS-fallback: missing subject/customer → prefix only', () => {
+  assert.strictEqual(buildHsDescription({ issueKey: null, ticketNumber: '43152', subject: '', customer: '' }),
     '[HS: #43152]');
 });
 
-test('buildHsDescription: subject only', () => {
-  assert.strictEqual(buildHsDescription({ ticketNumber: '43152', subject: 'Foo', customer: '' }),
+test('buildHsDescription HS-fallback: subject only', () => {
+  assert.strictEqual(buildHsDescription({ issueKey: null, ticketNumber: '43152', subject: 'Foo', customer: '' }),
     '[HS: #43152] Foo');
 });
 

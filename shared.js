@@ -116,10 +116,21 @@
     return { ticketNumber, subject, customer };
   }
 
-  function buildHsDescription({ ticketNumber, subject, customer }) {
-    const prefix = `[HS: #${ticketNumber}]`;
-    const tail = [subject, customer].filter((s) => s && String(s).trim()).join(' - ');
-    return tail ? `${prefix} ${tail}` : prefix;
+  function buildHsDescription({ issueKey, ticketNumber, subject, customer } = {}) {
+    const subj = subject && String(subject).trim();
+    const cust = customer && String(customer).trim();
+    const tnum = ticketNumber && String(ticketNumber).trim();
+
+    if (issueKey) {
+      const body = subj || (tnum ? `HS #${tnum}` : '');
+      const tail = cust ? (body ? `${body} — ${cust}` : cust) : body;
+      return tail ? `[${issueKey}] ${tail}` : `[${issueKey}]`;
+    }
+
+    // Fallback: no Linear identifier → legacy HS-prefix format
+    const prefix = tnum ? `[HS: #${tnum}]` : '[HS: #?]';
+    const legacyTail = [subj, cust].filter(Boolean).join(' - ');
+    return legacyTail ? `${prefix} ${legacyTail}` : prefix;
   }
 
   // ─── Snap-to-previous time ──────────────────────────────────────────────
