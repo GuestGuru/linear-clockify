@@ -265,15 +265,19 @@ function startHsElapsedCounter(startedAt) {
     hsElapsedInterval = null;
   }
 
-  const el = document.getElementById('lc-hs-elapsed');
-  if (!el) return;
+  const elements = [
+    document.getElementById('lc-hs-elapsed'),
+    document.getElementById('lc-hs-card-elapsed'),
+  ].filter(Boolean);
+  if (elements.length === 0) return;
 
   function update() {
     const diff = Date.now() - new Date(startedAt).getTime();
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
-    el.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    const text = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    elements.forEach((el) => { el.textContent = text; });
   }
 
   update();
