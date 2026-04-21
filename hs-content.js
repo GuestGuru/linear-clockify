@@ -396,12 +396,17 @@ function createHsRightPanelCard() {
   const { form, fields } = buildManualEntryForm();
   attachManualEntrySubmit(form, fields, async ({ startISO, endISO, dayStart, dayEnd }) => {
     const live = getConversationContext();
+    const c = live || ctx;
     return {
       action: 'createHsManualEntry',
       data: {
-        ticketNumber: live?.ticketNumber || ctx.ticketNumber,
-        subject: live?.subject || ctx.subject,
-        customer: live?.customer || ctx.customer,
+        convId: c.convId,
+        ticketNumber: c.ticketNumber,
+        subject: c.subject,
+        customer: c.customer,
+        canonicalHsUrl: c.canonicalHsUrl,
+        emails: c.emails || [],
+        hsCustomerId: c.hsCustomerId || null,
         startISO,
         endISO,
         dayStartISO: dayStart,

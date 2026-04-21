@@ -1,7 +1,10 @@
 // Linear → Clockify Timer — Service Worker
 importScripts('shared.js');
 
-const { detectTimerSource, computeSnapTime, buildHsDescription, isOverlappingEntry, linearRequest } = self.LCShared;
+const { detectTimerSource, computeSnapTime, buildHsDescription, isOverlappingEntry,
+        linearRequest, linearFindOrCreateIssue, OrphanIssueError, createConvLock } = self.LCShared;
+
+const convLock = createConvLock();
 
 const CLOCKIFY_BASE = 'https://api.clockify.me/api/v1';
 const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
@@ -11,6 +14,10 @@ async function getSettings() {
   const { settings } = await chrome.storage.local.get('settings');
   const defaults = {
     apiKey: '',
+    linearApiKey: '',
+    linearDefaultTeamId: '',
+    linearViewerId: '',
+    linearInProgressStateId: '',
     workspaceId: DEFAULT_WORKSPACE_ID,
     autoStop: false,
     snapEnabled: true,
@@ -29,6 +36,51 @@ async function getSettings() {
     },
   };
   return { ...defaults, ...(settings || {}) };
+}
+
+function getLinearConfig(settings) {
+  return {
+    linearApiKey: settings.linearApiKey || '',
+    linearDefaultTeamId: settings.linearDefaultTeamId || '',
+    linearViewerId: settings.linearViewerId || '',
+    linearInProgressStateId: settings.linearInProgressStateId || '',
+  };
+}
+
+function isLinearConfigComplete(config) {
+  return !!(config.linearApiKey && config.linearDefaultTeamId &&
+            config.linearViewerId && config.linearInProgressStateId);
+}
+
+async function resolveHsLinearIssue(ctx) {
+  const settings = await getSettings();
+  const linearConfig = getLinearConfig(settings);
+  if (!isLinearConfigComplete(linearConfig)) {
+    return { error: 'LINEAR_CONFIG_MISSING' };
+  }
+  const lockKey = `hsconv:${ctx.convId}`;
+  try {
+    const result = await convLock.run(lockKey, () => linearFindOrCreateIssue({
+      ctx: {
+        canonicalHsUrl: ctx.canonicalHsUrl,
+        subject: ctx.subject,
+        customer: ctx.customer,
+        ticketNumber: ctx.ticketNumber,
+        hsConvIdLong: ctx.convId,
+        hsConvIdShort: ctx.ticketNumber,
+        emails: ctx.emails || [],
+        hsCustomerId: ctx.hsCustomerId || null,
+      },
+      config: linearConfig,
+      fetchFn: fetch,
+    }));
+    return { ok: result };
+  } catch (err) {
+    if (err instanceof OrphanIssueError) {
+      return { error: 'ORPHAN_LINEAR_ISSUE', issueKey: err.issueKey };
+    }
+    return { error: `Linear: ${err.message}` };
+  }
 }
 
 async function clockifyFetch(path, options = {}) {
@@ -184,11 +236,13 @@ async function createManualEntry(issueKey, issueTitle, teamKey, startISO, endISO
   return { success: true, warning };
 }
 
-async function createHsManualEntry({
-  ticketNumber, subject, customer,
-  startISO, endISO, dayStartISO, dayEndISO,
-}) {
+async function createHsManualEntry(ctx) {
+  const { ticketNumber, subject, customer, startISO, endISO, dayStartISO, dayEndISO } = ctx;
   const settings = await getSettings();
+
+  const linear = await resolveHsLinearIssue(ctx);
+  if (linear.error) return linear;
+  const { issueKey } = linear.ok;
 
   const conflict = await findOverlap(startISO, endISO, dayStartISO, dayEndISO);
   if (conflict) {
@@ -210,7 +264,7 @@ async function createHsManualEntry({
   const body = {
     start: startISO,
     end: endISO,
-    description: buildHsDescription({ ticketNumber, subject, customer }),
+    description: buildHsDescription({ issueKey, ticketNumber, subject, customer }),
   };
   if (projectId) body.projectId = projectId;
 
@@ -265,10 +319,15 @@ async function startTimer(issueKey, issueTitle, teamKey) {
   return { success: true, warning };
 }
 
-async function startHsTimer({ ticketNumber, subject, customer }) {
+async function startHsTimer(ctx) {
+  const { ticketNumber, subject, customer } = ctx;
   const settings = await getSettings();
-  const projectName = settings.hsProjectName || HS_PROJECT_DEFAULT;
 
+  const linear = await resolveHsLinearIssue(ctx);
+  if (linear.error) return linear;
+  const { issueKey } = linear.ok;
+
+  const projectName = settings.hsProjectName || HS_PROJECT_DEFAULT;
   let projectId = null;
   let warning = null;
   if (projectName) {
@@ -278,7 +337,7 @@ async function startHsTimer({ ticketNumber, subject, customer }) {
 
   const body = {
     start: await resolveStartTime(),
-    description: buildHsDescription({ ticketNumber, subject, customer }),
+    description: buildHsDescription({ issueKey, ticketNumber, subject, customer }),
   };
   if (projectId) body.projectId = projectId;
 
@@ -292,6 +351,7 @@ async function startHsTimer({ ticketNumber, subject, customer }) {
     timeEntryId: entry.id,
     source: 'hs',
     ticketNumber,
+    issueKey,
     issueTitle,
     projectName,
     startedAt: body.start,
