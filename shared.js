@@ -343,6 +343,24 @@
     throw new OrphanIssueError(issue.identifier, attachmentErr);
   }
 
+  function createConvLock() {
+    const inFlight = new Map();
+    return {
+      async run(key, worker) {
+        if (inFlight.has(key)) return inFlight.get(key);
+        const promise = (async () => {
+          try {
+            return await worker();
+          } finally {
+            inFlight.delete(key);
+          }
+        })();
+        inFlight.set(key, promise);
+        return promise;
+      },
+    };
+  }
+
   // ─── Overlap detection ────────────────────────────────────────────────────
 
   function floorToMinuteMs(ms) {
@@ -734,6 +752,7 @@
     linearRequest,
     linearFindOrCreateIssue,
     OrphanIssueError,
+    createConvLock,
     detectTimerSource,
     computeSnapTime,
     buildSnapChip,

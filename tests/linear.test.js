@@ -217,3 +217,43 @@ test('linearFindOrCreateIssue throws LINEAR_CONFIG_MISSING when config incomplet
     /LINEAR_CONFIG_MISSING/
   );
 });
+
+// ─── createConvLock ─────────────────────────────────────────────────────
+
+const { createConvLock } = require('../shared.js');
+
+test('createConvLock dedupes concurrent calls with same key', async () => {
+  const lock = createConvLock();
+  let callCount = 0;
+  const worker = async () => {
+    callCount++;
+    await new Promise((r) => setTimeout(r, 10));
+    return callCount;
+  };
+  const [a, b] = await Promise.all([
+    lock.run('key1', worker),
+    lock.run('key1', worker),
+  ]);
+  assert.strictEqual(a, 1);
+  assert.strictEqual(b, 1);
+  assert.strictEqual(callCount, 1);
+});
+
+test('createConvLock allows different keys in parallel', async () => {
+  const lock = createConvLock();
+  let callCount = 0;
+  const worker = async () => { callCount++; return callCount; };
+  const [a, b] = await Promise.all([
+    lock.run('k1', worker),
+    lock.run('k2', worker),
+  ]);
+  assert.strictEqual(callCount, 2);
+  assert.notStrictEqual(a, b);
+});
+
+test('createConvLock releases after failure', async () => {
+  const lock = createConvLock();
+  await assert.rejects(lock.run('k', async () => { throw new Error('boom'); }), /boom/);
+  const out = await lock.run('k', async () => 42);
+  assert.strictEqual(out, 42);
+});
