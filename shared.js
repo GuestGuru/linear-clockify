@@ -75,6 +75,30 @@
     }
   }
 
+  const HS_EMAIL_SELECTOR = '[data-cy="Sidebar.CustomerEmails"] [data-testid="EmailList.EmailLink"]';
+
+  function parseHsEmailsFromDom(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') return [];
+    const links = root.querySelectorAll(HS_EMAIL_SELECTOR);
+    const out = [];
+    for (const link of links) {
+      const span = link.querySelector?.('.c-Truncate__content');
+      const text = span?.textContent ? String(span.textContent).trim() : '';
+      if (text) out.push(text);
+    }
+    return out;
+  }
+
+  function parseHsCustomerIdFromDom(root) {
+    if (!root || typeof root.querySelector !== 'function') return null;
+    const link = root.querySelector(HS_EMAIL_SELECTOR);
+    if (!link) return null;
+    const href = link.getAttribute?.('href');
+    if (!href) return null;
+    const m = String(href).match(/\/customer\/(\d+)/);
+    return m ? m[1] : null;
+  }
+
   function parseHsTitle(title) {
     const str = String(title || '').trim();
     const headMatch = str.match(/^#(\d+)\s+(.+)$/);
@@ -533,6 +557,8 @@
     attachManualEntrySubmit,
     parseHsUrl,
     canonicalizeHsUrl,
+    parseHsEmailsFromDom,
+    parseHsCustomerIdFromDom,
     parseHsTitle,
     buildHsDescription,
     detectTimerSource,

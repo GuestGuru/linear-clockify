@@ -315,3 +315,82 @@ test('canonicalizeHsUrl returns null on invalid input', () => {
   assert.strictEqual(canonicalizeHsUrl(null), null);
   assert.strictEqual(canonicalizeHsUrl(undefined), null);
 });
+
+// ─── parseHsEmailsFromDom ──────────────────────────────────────────────
+
+const { parseHsEmailsFromDom } = require('../shared.js');
+
+const EMAIL_SELECTOR = '[data-cy="Sidebar.CustomerEmails"] [data-testid="EmailList.EmailLink"]';
+
+test('parseHsEmailsFromDom returns empty array when no emails list present', () => {
+  const mockRoot = { querySelectorAll: () => [] };
+  assert.deepStrictEqual(parseHsEmailsFromDom(mockRoot), []);
+});
+
+test('parseHsEmailsFromDom extracts single email', () => {
+  const mockRoot = {
+    querySelectorAll(selector) {
+      if (selector === EMAIL_SELECTOR) {
+        return [{
+          querySelector: (s) =>
+            s === '.c-Truncate__content' ? { textContent: 'user@example.com' } : null,
+        }];
+      }
+      return [];
+    },
+  };
+  assert.deepStrictEqual(parseHsEmailsFromDom(mockRoot), ['user@example.com']);
+});
+
+test('parseHsEmailsFromDom extracts multiple emails and trims', () => {
+  const mk = (v) => ({
+    querySelector: (s) => s === '.c-Truncate__content' ? { textContent: v } : null,
+  });
+  const mockRoot = {
+    querySelectorAll(selector) {
+      if (selector === EMAIL_SELECTOR) {
+        return [mk('a@x.com'), mk(' b@y.hu '), mk('')];
+      }
+      return [];
+    },
+  };
+  assert.deepStrictEqual(parseHsEmailsFromDom(mockRoot), ['a@x.com', 'b@y.hu']);
+});
+
+test('parseHsEmailsFromDom handles null/undefined root', () => {
+  assert.deepStrictEqual(parseHsEmailsFromDom(null), []);
+  assert.deepStrictEqual(parseHsEmailsFromDom(undefined), []);
+});
+
+// ─── parseHsCustomerIdFromDom ──────────────────────────────────────────
+
+const { parseHsCustomerIdFromDom } = require('../shared.js');
+
+test('parseHsCustomerIdFromDom extracts customer ID from first email link href', () => {
+  const mockRoot = {
+    querySelector(selector) {
+      if (selector === EMAIL_SELECTOR) {
+        return { getAttribute: (a) => a === 'href' ? '/mailbox/334555/customer/749159069/900659784' : null };
+      }
+      return null;
+    },
+  };
+  assert.strictEqual(parseHsCustomerIdFromDom(mockRoot), '749159069');
+});
+
+test('parseHsCustomerIdFromDom returns null when no email link', () => {
+  const mockRoot = { querySelector: () => null };
+  assert.strictEqual(parseHsCustomerIdFromDom(mockRoot), null);
+});
+
+test('parseHsCustomerIdFromDom returns null on malformed href', () => {
+  const mockRoot = {
+    querySelector: () => ({ getAttribute: () => '/some/unrelated/path' }),
+  };
+  assert.strictEqual(parseHsCustomerIdFromDom(mockRoot), null);
+});
+
+test('parseHsCustomerIdFromDom handles null/undefined root', () => {
+  assert.strictEqual(parseHsCustomerIdFromDom(null), null);
+  assert.strictEqual(parseHsCustomerIdFromDom(undefined), null);
+});
