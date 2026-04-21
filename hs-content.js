@@ -43,6 +43,12 @@ function createHsTimerButton() {
   const ctx = getConversationContext();
   if (!ctx) return;
 
+  // Check anchor first — many HS conversations (Messenger threads, certain
+  // email layouts) don't expose [data-testid="conversation-header"]. The
+  // floating card handles those — just skip the header button here.
+  const anchor = findHsHeaderInsertion();
+  if (!anchor) return;
+
   const container = document.createElement('div');
   container.id = HS_BUTTON_CONTAINER_ID;
 
@@ -85,7 +91,6 @@ function createHsTimerButton() {
     }
   });
 
-  const anchor = findHsHeaderInsertion();
   anchor.appendChild(container);
 
   button.addEventListener('click', handleHsButtonClick);
