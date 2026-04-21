@@ -260,18 +260,18 @@ function startHsElapsedCounter(startedAt) {
 }
 
 function findHsSidebarInsertion() {
-  // The right sidebar contains one or more CollapsablePanel elements (e.g.,
-  // "Conversations"). We insert OUR card AFTER the last visible one. Returns
-  // { parent, afterNode } so the caller can insertBefore(card, afterNode.nextSibling).
-  const panels = Array.from(document.querySelectorAll('[data-testid="CollapsablePanel"]'))
-    .filter((p) => p.offsetParent !== null);
-  if (panels.length === 0) return null;
-
-  // Prefer the Conversations panel if present (visually the bottom of the sidebar
-  // in our observed layouts); otherwise fall back to the last visible panel.
-  const conversations = panels.find((p) => p.classList.contains('is-conversations-panel'));
-  const target = conversations || panels[panels.length - 1];
-  return { parent: target.parentElement, afterNode: target };
+  // The right sidebar always contains a distinctive Sidebar.* data-cy element
+  // (customer name/avatar toggle). From that anchor we walk up to the
+  // simplebar-content scroll container, which is stable regardless of whether
+  // lazy panels (Conversations, etc.) have loaded. Prepend our card to it so
+  // it sits at the top of the sidebar.
+  const anchor = document.querySelector(
+    '[data-cy="Sidebar.CustomerName"], [data-cy="Sidebar.ViewModeToggle"], [data-testid="contact-properties-section"]'
+  );
+  if (!anchor) return null;
+  const scroll = anchor.closest('.simplebar-content') || anchor.closest('.simplebar-content-wrapper');
+  if (!scroll || scroll.offsetParent === null) return null;
+  return { parent: scroll, afterNode: null };
 }
 
 function createHsRightPanelCard() {
@@ -365,8 +365,12 @@ function createHsRightPanelCard() {
   card.appendChild(manualTitle);
   card.appendChild(form);
 
-  // insertion = { parent, afterNode } — place card right after afterNode
-  insertion.parent.insertBefore(card, insertion.afterNode.nextSibling);
+  // insertion = { parent, afterNode } — afterNode null means prepend
+  if (insertion.afterNode) {
+    insertion.parent.insertBefore(card, insertion.afterNode.nextSibling);
+  } else {
+    insertion.parent.insertBefore(card, insertion.parent.firstChild);
+  }
 
   button.addEventListener('click', handleHsButtonClick);
   hsCardSnapChip.refresh();
