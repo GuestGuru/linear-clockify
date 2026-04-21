@@ -284,6 +284,15 @@ function createHsRightPanelCard() {
   const existing = document.getElementById(HS_CARD_ID);
   if (existing) existing.remove();
 
+  // Any running elapsed interval is tied to the OLD card's DOM node via closure.
+  // Clear it so the next updateHsButtonState restarts the counter against the
+  // fresh element we're about to create.
+  if (hsElapsedInterval) {
+    clearInterval(hsElapsedInterval);
+    hsElapsedInterval = null;
+    hsElapsedStartedAt = null;
+  }
+
   const ctx = getConversationContext();
   if (!ctx) return;
 
