@@ -261,15 +261,22 @@ function startHsElapsedCounter(startedAt) {
 
 function findHsSidebarInsertion() {
   // The right sidebar has a .simplebar-content scroll container whose direct
-  // children are: avatar-toggle, ProfilePanelWrapper, (optional) CollapsablePanel.
-  // We anchor on a distinctive sidebar element, walk up to the simplebar-content,
-  // then walk BACK DOWN to find which top-level child contains the anchor.
-  // Insert our card AFTER that child so we land between customer info and the
-  // Conversations panel. Falls back to prepend if anchor is a direct child.
-  const anchor = document.querySelector(
-    '[data-testid="contact-properties-section"], [data-cy="Sidebar.CustomerName"], [data-cy="Sidebar.ViewModeToggle"]'
-  );
+  // children include: avatar-toggle, ProfilePanelWrapper, (optional) CollapsablePanel.
+  // We try anchors in strict priority order — CustomerName sits INSIDE the
+  // ProfilePanel, so walking up gives us ProfilePanelWrapper (the block holding
+  // name + email + properties). Card inserted AFTER that → lands between the
+  // customer-info block and the Conversations panel.
+  const anchorSelectors = [
+    '[data-cy="Sidebar.CustomerName"]',
+    '[data-testid="contact-properties-section"]',
+  ];
+  let anchor = null;
+  for (const sel of anchorSelectors) {
+    anchor = document.querySelector(sel);
+    if (anchor) break;
+  }
   if (!anchor) return null;
+
   const scroll = anchor.closest('.simplebar-content') || anchor.closest('.simplebar-content-wrapper');
   if (!scroll || scroll.offsetParent === null) return null;
 
