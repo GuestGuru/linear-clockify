@@ -5,6 +5,9 @@ const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
 const DEFAULT_SETTINGS = {
   apiKey: '',
   linearApiKey: '',
+  linearDefaultTeamId: '',
+  linearViewerId: '',
+  linearInProgressStateId: '',
   workspaceId: DEFAULT_WORKSPACE_ID,
   autoStop: false,
   teamMapping: {
@@ -33,6 +36,17 @@ async function render() {
   document.getElementById('linearApiKey').value = settings.linearApiKey || '';
   document.getElementById('workspaceId').value = settings.workspaceId || DEFAULT_SETTINGS.workspaceId;
   document.getElementById('autoStop').checked = settings.autoStop || false;
+
+  const sel = document.getElementById('linearDefaultTeam');
+  if (settings.linearDefaultTeamId) {
+    const opt = document.createElement('option');
+    opt.value = settings.linearDefaultTeamId;
+    opt.textContent = '(mentett — kattints Linear teszt-re frissítéshez)';
+    opt.dataset.inProgressStateId = settings.linearInProgressStateId || '';
+    opt.selected = true;
+    sel.appendChild(opt);
+    sel.dataset.viewerId = settings.linearViewerId || '';
+  }
 
   renderMappingTable(settings.teamMapping || DEFAULT_SETTINGS.teamMapping);
 }
@@ -107,9 +121,18 @@ function showStatus(message, isError) {
 }
 
 document.getElementById('save').addEventListener('click', async () => {
+  const sel = document.getElementById('linearDefaultTeam');
+  const chosen = sel.options[sel.selectedIndex];
+  const linearDefaultTeamId = sel.value || '';
+  const linearInProgressStateId = chosen?.dataset?.inProgressStateId || '';
+  const linearViewerId = sel.dataset.viewerId || '';
+
   const settings = {
     apiKey: document.getElementById('apiKey').value.trim(),
     linearApiKey: document.getElementById('linearApiKey').value.trim(),
+    linearDefaultTeamId,
+    linearViewerId,
+    linearInProgressStateId,
     workspaceId: document.getElementById('workspaceId').value.trim() || DEFAULT_SETTINGS.workspaceId,
     autoStop: document.getElementById('autoStop').checked,
     teamMapping: collectMapping(),
@@ -118,6 +141,53 @@ document.getElementById('save').addEventListener('click', async () => {
   await chrome.storage.local.set({ settings });
   await chrome.storage.local.remove(['projectCache', 'userId']);
   showStatus('\u2705 Beállítások mentve');
+});
+
+document.getElementById('linearValidate').addEventListener('click', async () => {
+  const statusEl = document.getElementById('linearStatus');
+  statusEl.style.display = 'block';
+  statusEl.className = 'status';
+  statusEl.textContent = 'Kapcsolódás Linear-hez…';
+
+  const apiKey = document.getElementById('linearApiKey').value.trim();
+  if (!apiKey) {
+    statusEl.className = 'status error';
+    statusEl.textContent = 'Add meg a Linear API key-t előbb.';
+    return;
+  }
+
+  const result = await chrome.runtime.sendMessage({
+    action: 'validateLinearConfig',
+    data: { linearApiKey: apiKey },
+  });
+
+  if (!result || result.error) {
+    statusEl.className = 'status error';
+    statusEl.textContent = `Hiba: ${result?.error || 'nincs válasz'}`;
+    return;
+  }
+
+  statusEl.className = 'status';
+  statusEl.textContent = `\u2705 Bejelentkezve mint ${result.viewerName} — ${result.teams.length} team elérhető.`;
+
+  const sel = document.getElementById('linearDefaultTeam');
+  sel.textContent = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '— Válassz egy team-et —';
+  sel.appendChild(placeholder);
+
+  const currentSettings = await loadSettings();
+  for (const team of result.teams) {
+    const opt = document.createElement('option');
+    opt.value = team.id;
+    opt.dataset.inProgressStateId = team.inProgressStateId || '';
+    opt.textContent = `${team.key} — ${team.name}`;
+    if (team.id === currentSettings.linearDefaultTeamId) opt.selected = true;
+    sel.appendChild(opt);
+  }
+
+  sel.dataset.viewerId = result.viewerId;
 });
 
 document.getElementById('reset').addEventListener('click', async () => {

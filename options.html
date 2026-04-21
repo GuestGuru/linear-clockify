@@ -89,6 +89,17 @@
     <label for="linearApiKey">API Key</label>
     <input type="password" id="linearApiKey" placeholder="Linear API key (Settings → API)">
     <div class="hint">Kötelező — linear.app/settings/api oldalon hozható létre</div>
+
+    <div style="margin-top:12px;">
+      <button type="button" id="linearValidate" class="btn">🔎 Linear teszt</button>
+      <div id="linearStatus" class="status" style="display:none; margin-top:8px;"></div>
+    </div>
+
+    <label for="linearDefaultTeam" style="margin-top:12px;">Alapértelmezett Team (HelpScout issue-khoz)</label>
+    <select id="linearDefaultTeam">
+      <option value="">— Tölts ki és kattints Linear tesztre —</option>
+    </select>
+    <div class="hint">A HelpScout conversationökből generált issue-k ebbe a team-be kerülnek (In Progress state, neked assignolva)</div>
   </div>
 
   <div class="section">

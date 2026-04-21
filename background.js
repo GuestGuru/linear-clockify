@@ -168,6 +168,14 @@ async function getIssueDetails(teamKey, issueNumber) {
   }
 }
 
+function pickInProgressState(stateNodes) {
+  if (!Array.isArray(stateNodes)) return null;
+  const byName = stateNodes.find((s) => s.name === 'In Progress');
+  if (byName) return byName.id;
+  const byType = stateNodes.find((s) => s.type === 'started');
+  return byType ? byType.id : null;
+}
+
 async function getEntriesInRange(dayStartISO, dayEndISO) {
   const settings = await getSettings();
   const userId = await getUserId();
@@ -635,6 +643,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const next = { ...settings, snapEnabled: !!message.data.enabled };
           await chrome.storage.local.set({ settings: next });
           return { success: true };
+        }
+        case 'validateLinearConfig': {
+          const settings = await getSettings();
+          const apiKey = message.data?.linearApiKey || settings.linearApiKey;
+          if (!apiKey) return { error: 'NO_API_KEY' };
+          try {
+            const data = await linearRequest({
+              query: `query { viewer { id name } teams(first: 100) { nodes { id key name states { nodes { id name type } } } } }`,
+              apiKey,
+              fetchFn: fetch,
+            });
+            return {
+              success: true,
+              viewerId: data.viewer.id,
+              viewerName: data.viewer.name,
+              teams: data.teams.nodes.map((t) => ({
+                id: t.id,
+                key: t.key,
+                name: t.name,
+                inProgressStateId: pickInProgressState(t.states.nodes),
+              })),
+            };
+          } catch (err) {
+            return { error: err.message };
+          }
         }
         default:
           return { error: `Unknown action: ${message.action}` };
