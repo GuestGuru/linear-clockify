@@ -13,6 +13,7 @@ async function getSettings() {
     apiKey: '',
     workspaceId: DEFAULT_WORKSPACE_ID,
     autoStop: false,
+    snapEnabled: true,
     teamMapping: {
       GG: 'Cég működése',
       MAN: 'Management',
@@ -203,7 +204,7 @@ async function startTimer(issueKey, issueTitle, teamKey) {
   }
 
   const body = {
-    start: new Date().toISOString(),
+    start: await resolveStartTime(),
     description: `[${issueKey}] ${issueTitle}`,
   };
   if (projectId) {
@@ -327,6 +328,31 @@ function clearBadge() {
   chrome.action.setBadgeText({ text: '' });
 }
 
+const SNAP_LOOKBACK_MS = 30 * 60 * 1000;
+
+async function getSnapInfo() {
+  const settings = await getSettings();
+  const snapEnabled = settings.snapEnabled !== false; // default true
+  if (!snapEnabled) return { snapTo: null, snapEnabled: false };
+
+  try {
+    const now = Date.now();
+    const windowStart = new Date(now - SNAP_LOOKBACK_MS).toISOString();
+    const windowEnd = new Date(now).toISOString();
+    const entries = await getEntriesInRange(windowStart, windowEnd);
+    const snapTo = computeSnapTime(entries || [], now);
+    return { snapTo, snapEnabled: true };
+  } catch (err) {
+    console.warn('[LC] getSnapInfo failed:', err.message);
+    return { snapTo: null, snapEnabled: true };
+  }
+}
+
+async function resolveStartTime() {
+  const info = await getSnapInfo();
+  return info.snapTo || new Date().toISOString();
+}
+
 chrome.alarms.create('badge-refresh', { periodInMinutes: 1 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'badge-refresh') {
@@ -363,12 +389,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const details = await getIssueDetails(teamKey, issueNumber);
           return { details };
         }
+        case 'getSnapInfo': {
+          return await getSnapInfo();
+        }
         case 'getStatus': {
           const { activeTimer } = await chrome.storage.local.get('activeTimer');
           return { activeTimer: activeTimer || null };
         }
         case 'openOptions': {
           chrome.runtime.openOptionsPage();
+          return { success: true };
+        }
+        case 'setSnapEnabled': {
+          const settings = await getSettings();
+          const next = { ...settings, snapEnabled: !!message.data.enabled };
+          await chrome.storage.local.set({ settings: next });
           return { success: true };
         }
         default:
