@@ -315,3 +315,12 @@
 .lc-start-editor-status-info {
   color: #6b7280;
 }
+
+#lc-hs-timer-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  vertical-align: middle;
+  flex-wrap: wrap;
+}
