@@ -129,3 +129,36 @@ test('buildHsDescription: subject only', () => {
   assert.strictEqual(buildHsDescription({ ticketNumber: '43152', subject: 'Foo', customer: '' }),
     '[HS: #43152] Foo');
 });
+
+// ─── detectTimerSource ──────────────────────────────────────────────────
+
+const { detectTimerSource } = require('../shared.js');
+
+test('detectTimerSource: Linear issue key', () => {
+  assert.deepStrictEqual(detectTimerSource('[IT-123] Post booking automsg'), {
+    source: 'linear',
+    issueKey: 'IT-123',
+    teamKey: 'IT',
+    issueTitle: 'Post booking automsg',
+  });
+});
+
+test('detectTimerSource: HS ticket', () => {
+  assert.deepStrictEqual(detectTimerSource('[HS: #43152] Re: Népszínház 26. lemondás - Tímea Kovács'), {
+    source: 'hs',
+    ticketNumber: '43152',
+    issueTitle: 'Re: Népszínház 26. lemondás - Tímea Kovács',
+  });
+});
+
+test('detectTimerSource: HS without # (backward compat)', () => {
+  const r = detectTimerSource('[HS: 43152] Subject - Customer');
+  assert.strictEqual(r?.source, 'hs');
+  assert.strictEqual(r?.ticketNumber, '43152');
+});
+
+test('detectTimerSource: unknown description', () => {
+  assert.strictEqual(detectTimerSource('just some random text'), null);
+  assert.strictEqual(detectTimerSource(''), null);
+  assert.strictEqual(detectTimerSource(null), null);
+});

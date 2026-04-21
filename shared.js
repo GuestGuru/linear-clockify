@@ -85,6 +85,36 @@
     return tail ? `${prefix} ${tail}` : prefix;
   }
 
+  // ─── Timer source detection ──────────────────────────────────────────────
+
+  function detectTimerSource(description) {
+    const str = String(description || '');
+    if (!str) return null;
+
+    const hs = str.match(/^\[HS:\s*#?(\d+)\]\s*(.*)$/);
+    if (hs) {
+      return {
+        source: 'hs',
+        ticketNumber: hs[1],
+        issueTitle: hs[2].trim(),
+      };
+    }
+
+    const linear = str.match(/^\[([A-Z]+-\d+)\]\s*(.+)$/);
+    if (linear) {
+      const issueKey = linear[1];
+      const teamKey = issueKey.split('-')[0];
+      return {
+        source: 'linear',
+        issueKey,
+        teamKey,
+        issueTitle: linear[2].trim(),
+      };
+    }
+
+    return null;
+  }
+
   // ─── Status helpers ──────────────────────────────────────────────────────
 
   function setStatus(el, kind, text) {
@@ -279,6 +309,7 @@
     parseHsUrl,
     parseHsTitle,
     buildHsDescription,
+    detectTimerSource,
   };
 
   global.LCShared = api;
