@@ -377,11 +377,12 @@ function tryInsertHsUI() {
   createHsRightPanelCard();
   updateHsButtonState();
 
-  // Container is the required element; the sidebar card may not find a match
-  // on some HS layouts — we still consider init successful if the header
-  // button is in place.
+  // UI is considered inserted if EITHER the header button OR the sidebar card
+  // is in place — some HS layouts (e.g., Messenger conversations) may miss
+  // one of the two anchor points, and that's OK.
   const container = document.getElementById(HS_BUTTON_CONTAINER_ID);
-  return Boolean(container);
+  const card = document.getElementById(HS_CARD_ID);
+  return Boolean(container || card);
 }
 
 // Keep-alive check: HS re-renders its conversation view on navigation or
