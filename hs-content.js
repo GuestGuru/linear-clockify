@@ -9,9 +9,12 @@ const {
 } = window.LCShared;
 
 const HS_BUTTON_CONTAINER_ID = 'lc-hs-timer-container';
+const HS_CARD_ID = 'lc-hs-right-card';
 let hsMainSnapChip = null;
 let hsMainStartEditor = null;
 let hsElapsedInterval = null;
+let hsCardSnapChip = null;
+let hsCardStartEditor = null;
 
 function getConversationContext() {
   const url = parseHsUrl(window.location.pathname);
@@ -192,7 +195,7 @@ function applyHsButtonState(button, elapsed, info, state, activeTimer) {
 }
 
 async function updateHsButtonState() {
-  // Defensive clear (same race guard as content.js)
+  // Defensive: clear any running elapsed interval.
   if (hsElapsedInterval) {
     clearInterval(hsElapsedInterval);
     hsElapsedInterval = null;
@@ -201,14 +204,23 @@ async function updateHsButtonState() {
   const ctx = getConversationContext();
   if (!ctx) return;
 
-  const button = document.getElementById('lc-hs-timer-button');
-  const elapsed = document.getElementById('lc-hs-elapsed');
-  const info = document.getElementById('lc-hs-info');
-  if (!button) return;
+  const buttons = [
+    {
+      button: document.getElementById('lc-hs-timer-button'),
+      elapsed: document.getElementById('lc-hs-elapsed'),
+      info: document.getElementById('lc-hs-info'),
+    },
+    {
+      button: document.getElementById('lc-hs-card-timer-button'),
+      elapsed: document.getElementById('lc-hs-card-elapsed'),
+      info: document.getElementById('lc-hs-card-info'),
+    },
+  ].filter((b) => b.button);
+  if (buttons.length === 0) return;
 
   const { settings } = await chrome.storage.local.get('settings');
   if (!settings?.apiKey) {
-    applyHsButtonState(button, elapsed, info, 'hidden');
+    buttons.forEach(({ button, elapsed, info }) => { applyHsButtonState(button, elapsed, info, 'hidden'); });
     return;
   }
 
@@ -222,12 +234,17 @@ async function updateHsButtonState() {
   } else {
     state = 'switch';
   }
-  applyHsButtonState(button, elapsed, info, state, activeTimer);
+  buttons.forEach(({ button, elapsed, info }) => { applyHsButtonState(button, elapsed, info, state, activeTimer); });
 
   if (state === 'stop') startHsElapsedCounter(activeTimer.startedAt);
-  if (state !== 'stop' && hsMainStartEditor) hsMainStartEditor.hide();
+
+  if (state !== 'stop') {
+    if (hsMainStartEditor) hsMainStartEditor.hide();
+    if (hsCardStartEditor) hsCardStartEditor.hide();
+  }
 
   if (hsMainSnapChip) hsMainSnapChip.refresh();
+  if (hsCardSnapChip) hsCardSnapChip.refresh();
 }
 
 function startHsElapsedCounter(startedAt) {
@@ -250,6 +267,118 @@ function startHsElapsedCounter(startedAt) {
 
   update();
   hsElapsedInterval = setInterval(update, 1000);
+}
+
+function findHsSidebarInsertion() {
+  const selectors = [
+    '[data-cy="conversation-properties"]',
+    '[data-cy="sidebar"]',
+    '.sidebar',
+    '.conversation-sidebar',
+    'aside',
+  ];
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el && el.offsetParent !== null) return el;
+  }
+  return null;
+}
+
+function createHsRightPanelCard() {
+  const existing = document.getElementById(HS_CARD_ID);
+  if (existing) existing.remove();
+
+  const ctx = getConversationContext();
+  if (!ctx) return;
+
+  const insertion = findHsSidebarInsertion();
+  if (!insertion) return;
+
+  const card = document.createElement('div');
+  card.id = HS_CARD_ID;
+  card.className = 'lc-card';
+
+  const title = document.createElement('div');
+  title.className = 'lc-card-title';
+  title.textContent = 'Clockify timer';
+
+  const timerRow = document.createElement('div');
+  timerRow.className = 'lc-card-timer-row';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'lc-hs-card-timer-button';
+  button.className = 'lc-btn lc-btn-start';
+  button.textContent = '▶ Start';
+
+  const elapsed = document.createElement('span');
+  elapsed.id = 'lc-hs-card-elapsed';
+  elapsed.className = 'lc-elapsed';
+  elapsed.style.display = 'none';
+
+  const info = document.createElement('span');
+  info.id = 'lc-hs-card-info';
+  info.className = 'lc-info';
+  info.style.display = 'none';
+
+  hsCardSnapChip = buildSnapChip();
+  hsCardSnapChip.chip.id = 'lc-hs-card-snap-chip';
+
+  hsCardStartEditor = buildStartEditor();
+  hsCardStartEditor.container.id = 'lc-hs-card-start-editor';
+
+  timerRow.appendChild(button);
+  timerRow.appendChild(elapsed);
+  timerRow.appendChild(info);
+  timerRow.appendChild(hsCardSnapChip.chip);
+
+  elapsed.addEventListener('click', async () => {
+    if (!hsCardStartEditor) return;
+    if (hsCardStartEditor.container.style.display !== 'none') {
+      hsCardStartEditor.hide();
+      return;
+    }
+    const { activeTimer } = await chrome.storage.local.get('activeTimer');
+    if (activeTimer?.startedAt && !activeTimer.external) {
+      hsCardStartEditor.show(activeTimer.startedAt);
+    }
+  });
+
+  const divider = document.createElement('div');
+  divider.className = 'lc-card-divider';
+
+  const manualTitle = document.createElement('div');
+  manualTitle.className = 'lc-card-subtitle';
+  manualTitle.textContent = 'Manuális rögzítés';
+
+  const { form, fields } = buildManualEntryForm();
+  attachManualEntrySubmit(form, fields, async ({ startISO, endISO, dayStart, dayEnd }) => {
+    const live = getConversationContext();
+    return {
+      action: 'createHsManualEntry',
+      data: {
+        ticketNumber: live?.ticketNumber || ctx.ticketNumber,
+        subject: live?.subject || ctx.subject,
+        customer: live?.customer || ctx.customer,
+        startISO,
+        endISO,
+        dayStartISO: dayStart,
+        dayEndISO: dayEnd,
+      },
+    };
+  });
+
+  card.appendChild(title);
+  card.appendChild(timerRow);
+  card.appendChild(hsCardStartEditor.container);
+  card.appendChild(divider);
+  card.appendChild(manualTitle);
+  card.appendChild(form);
+
+  insertion.insertBefore(card, insertion.firstChild);
+
+  button.addEventListener('click', handleHsButtonClick);
+  hsCardSnapChip.refresh();
 }
 
 console.log('[LC HS] loaded', getConversationContext());
