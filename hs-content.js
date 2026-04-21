@@ -6,6 +6,7 @@ const {
   buildManualEntryForm, attachManualEntrySubmit,
   buildSnapChip, buildStartEditor,
   parseHsUrl, parseHsTitle,
+  canonicalizeHsUrl, parseHsEmailsFromDom, parseHsCustomerIdFromDom,
 } = window.LCShared;
 
 const HS_BUTTON_CONTAINER_ID = 'lc-hs-timer-container';
@@ -25,6 +26,9 @@ function getConversationContext() {
     ticketNumber: url.ticketNumber,
     subject: titleParsed?.subject || '',
     customer: titleParsed?.customer || '',
+    canonicalHsUrl: canonicalizeHsUrl(window.location.href) || window.location.href,
+    emails: parseHsEmailsFromDom(document),
+    hsCustomerId: parseHsCustomerIdFromDom(document),
   };
 }
 
@@ -108,11 +112,13 @@ async function handleHsButtonClick(event) {
 
   try {
     const { activeTimer } = await chrome.storage.local.get('activeTimer');
+    console.log('[LC HS] click', { buttonId: button.id, ticketNumber: ctx.ticketNumber, activeTimer });
 
     if (activeTimer && activeTimer.source === 'hs' &&
         activeTimer.ticketNumber === ctx.ticketNumber && !activeTimer.external) {
       button.textContent = '⏳ Stopping…';
       const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
+      console.log('[LC HS] stopTimer ←', result);
       if (result.error) showHsError(result.error);
     } else if (activeTimer && !activeTimer.external) {
       button.textContent = '⏳ Switching…';
@@ -120,6 +126,7 @@ async function handleHsButtonClick(event) {
         action: 'stopAndStartHsTimer',
         data: ctx,
       });
+      console.log('[LC HS] stopAndStartHsTimer ←', result);
       if (result.error) showHsError(result.error);
       if (result.warning) showHsWarning(result.warning);
     } else {
@@ -128,10 +135,12 @@ async function handleHsButtonClick(event) {
         action: 'startHsTimer',
         data: ctx,
       });
+      console.log('[LC HS] startHsTimer ←', result);
       if (result.error) showHsError(result.error);
       if (result.warning) showHsWarning(result.warning);
     }
   } catch (err) {
+    console.error('[LC HS] click error', err);
     showHsError(err.message);
     button.textContent = originalText;
   } finally {
@@ -198,6 +207,7 @@ function applyHsButtonState(button, elapsed, info, state, activeTimer) {
 }
 
 let hsElapsedStartedAt = null;
+let hsLastStateLogKey = null;
 
 async function updateHsButtonState() {
   const ctx = getConversationContext();
@@ -235,6 +245,17 @@ async function updateHsButtonState() {
   }
   buttons.forEach(({ button, elapsed, info }) => { applyHsButtonState(button, elapsed, info, state, activeTimer); });
 
+  const stateKey = activeTimer
+    ? `${state}|${activeTimer.source}|${activeTimer.ticketNumber || activeTimer.issueKey || ''}|${!!activeTimer.external}`
+    : state;
+  if (stateKey !== hsLastStateLogKey) {
+    hsLastStateLogKey = stateKey;
+    const activeSummary = activeTimer
+      ? { source: activeTimer.source, ticketNumber: activeTimer.ticketNumber, issueKey: activeTimer.issueKey, external: !!activeTimer.external }
+      : null;
+    console.log('[LC HS] state →', state, activeSummary);
+  }
+
   // Only restart the elapsed counter when state transitions to 'stop' OR the
   // timer's startedAt changes. Previously we cleared + restarted on every call,
   // which meant the setInterval tick (1s) was always killed by the next
@@ -254,6 +275,13 @@ async function updateHsButtonState() {
     if (hsCardStartEditor) hsCardStartEditor.hide();
   }
 
+  // Snap chip refresh moved to storage listener + watchdog — see bottom.
+  // Previously refreshed on every updateHsButtonState call, which was
+  // triggered by a 500ms keep-alive + a 50ms-debounced MutationObserver,
+  // producing dozens of Clockify API calls per second on a busy HS page.
+}
+
+function refreshHsSnapChips() {
   if (hsMainSnapChip) hsMainSnapChip.refresh();
   if (hsCardSnapChip) hsCardSnapChip.refresh();
 }
@@ -444,13 +472,19 @@ hsDomObserver.observe(document.body, { childList: true, subtree: true });
 
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.activeTimer || changes.settings) {
+    console.log('[LC HS] storage change', Object.keys(changes));
     updateHsButtonState();
+    refreshHsSnapChips();
   }
 });
 
 if (parseHsUrl(window.location.pathname)) {
   ensureHsUI();
   startHsKeepAlive();
+  // Watchdog: the 30-min snap window rolls forward in real time, so even
+  // without storage changes the chip needs an occasional refresh to hide
+  // itself once the last entry falls outside the window.
+  setInterval(refreshHsSnapChips, 60000);
 }
 
 console.log('[LC HS] content script initialized');
