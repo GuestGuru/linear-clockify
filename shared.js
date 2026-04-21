@@ -85,6 +85,27 @@
     return tail ? `${prefix} ${tail}` : prefix;
   }
 
+  // ─── Snap-to-previous time ──────────────────────────────────────────────
+
+  const SNAP_WINDOW_MS = 15 * 60 * 1000;
+
+  function computeSnapTime(entries, nowMs) {
+    if (!Array.isArray(entries) || entries.length === 0) return null;
+
+    let latestEnd = 0;
+    for (const e of entries) {
+      const end = e?.timeInterval?.end;
+      if (!end) continue;
+      const t = new Date(end).getTime();
+      if (Number.isFinite(t) && t > latestEnd) latestEnd = t;
+    }
+    if (!latestEnd) return null;
+
+    const gap = nowMs - latestEnd;
+    if (gap <= 0 || gap >= SNAP_WINDOW_MS) return null;
+    return new Date(latestEnd).toISOString();
+  }
+
   // ─── Timer source detection ──────────────────────────────────────────────
 
   function detectTimerSource(description) {
@@ -310,6 +331,7 @@
     parseHsTitle,
     buildHsDescription,
     detectTimerSource,
+    computeSnapTime,
   };
 
   global.LCShared = api;

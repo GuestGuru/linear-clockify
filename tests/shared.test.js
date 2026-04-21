@@ -162,3 +162,58 @@ test('detectTimerSource: unknown description', () => {
   assert.strictEqual(detectTimerSource(''), null);
   assert.strictEqual(detectTimerSource(null), null);
 });
+
+// ─── computeSnapTime ────────────────────────────────────────────────
+
+const { computeSnapTime } = require('../shared.js');
+
+test('computeSnapTime: no entries → null', () => {
+  assert.strictEqual(computeSnapTime([], Date.now()), null);
+});
+
+test('computeSnapTime: only running entries (no end) → null', () => {
+  const entries = [{ timeInterval: { start: '2026-04-21T10:00:00Z', end: null } }];
+  assert.strictEqual(computeSnapTime(entries, Date.now()), null);
+});
+
+test('computeSnapTime: last entry ended 5 min ago → snap ISO', () => {
+  const now = new Date('2026-04-21T10:40:00Z').getTime();
+  const entries = [
+    { timeInterval: { start: '2026-04-21T10:00:00Z', end: '2026-04-21T10:35:00Z' } },
+  ];
+  assert.strictEqual(computeSnapTime(entries, now), '2026-04-21T10:35:00.000Z');
+});
+
+test('computeSnapTime: last entry ended 20 min ago → null', () => {
+  const now = new Date('2026-04-21T11:00:00Z').getTime();
+  const entries = [
+    { timeInterval: { start: '2026-04-21T10:00:00Z', end: '2026-04-21T10:40:00Z' } },
+  ];
+  assert.strictEqual(computeSnapTime(entries, now), null);
+});
+
+test('computeSnapTime: picks the latest end across multiple entries', () => {
+  const now = new Date('2026-04-21T10:40:00Z').getTime();
+  const entries = [
+    { timeInterval: { start: '2026-04-21T09:00:00Z', end: '2026-04-21T10:15:00Z' } },
+    { timeInterval: { start: '2026-04-21T10:20:00Z', end: '2026-04-21T10:30:00Z' } },
+    { timeInterval: { start: '2026-04-21T08:00:00Z', end: '2026-04-21T08:30:00Z' } },
+  ];
+  assert.strictEqual(computeSnapTime(entries, now), '2026-04-21T10:30:00.000Z');
+});
+
+test('computeSnapTime: end in the future → null (clock skew guard)', () => {
+  const now = new Date('2026-04-21T10:00:00Z').getTime();
+  const entries = [
+    { timeInterval: { start: '2026-04-21T10:00:00Z', end: '2026-04-21T10:10:00Z' } },
+  ];
+  assert.strictEqual(computeSnapTime(entries, now), null);
+});
+
+test('computeSnapTime: exactly 15 min gap → null (boundary exclusive)', () => {
+  const now = new Date('2026-04-21T10:45:00Z').getTime();
+  const entries = [
+    { timeInterval: { start: '2026-04-21T10:00:00Z', end: '2026-04-21T10:30:00Z' } },
+  ];
+  assert.strictEqual(computeSnapTime(entries, now), null);
+});
