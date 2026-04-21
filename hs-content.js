@@ -390,19 +390,6 @@ function createHsRightPanelCard() {
   hsCardSnapChip.refresh();
 }
 
-function tryInsertHsUI() {
-  createHsTimerButton();
-  createHsRightPanelCard();
-  updateHsButtonState();
-
-  // UI is considered inserted if EITHER the header button OR the sidebar card
-  // is in place — some HS layouts (e.g., Messenger conversations) may miss
-  // one of the two anchor points, and that's OK.
-  const container = document.getElementById(HS_BUTTON_CONTAINER_ID);
-  const card = document.getElementById(HS_CARD_ID);
-  return Boolean(container || card);
-}
-
 // Keep-alive check: HS re-renders its conversation view on navigation or
 // other interactions. If our UI goes missing, re-insert it. Running every
 // second is cheap (two getElementById checks) and avoids the fragility of
@@ -411,10 +398,13 @@ let hsKeepAliveInterval = null;
 
 function ensureHsUI() {
   if (!parseHsUrl(window.location.pathname)) return;
-  const container = document.getElementById(HS_BUTTON_CONTAINER_ID);
-  const card = document.getElementById(HS_CARD_ID);
-  if (container && card) return;
-  tryInsertHsUI();
+  // Run the two inserts independently — header may succeed while the sidebar
+  // is still loading, or vice versa. Each create-* is idempotent (removes
+  // existing element of its own ID before re-adding) but only does DOM work
+  // when its anchor is actually found.
+  if (!document.getElementById(HS_BUTTON_CONTAINER_ID)) createHsTimerButton();
+  if (!document.getElementById(HS_CARD_ID)) createHsRightPanelCard();
+  updateHsButtonState();
 }
 
 function startHsKeepAlive() {
@@ -422,16 +412,19 @@ function startHsKeepAlive() {
   hsKeepAliveInterval = setInterval(ensureHsUI, 1000);
 }
 
+// DOM observer — fires ensureHsUI (debounced) on any document.body mutation.
+// This catches late-rendering sidebar content on page reload, where the 1s
+// polling is too slow to feel responsive.
 let hsLastUrl = window.location.href;
-const hsUrlObserver = new MutationObserver(() => {
+let hsDomDebounce = null;
+const hsDomObserver = new MutationObserver(() => {
   if (window.location.href !== hsLastUrl) {
     hsLastUrl = window.location.href;
-    if (parseHsUrl(window.location.pathname)) {
-      ensureHsUI();
-    }
   }
+  clearTimeout(hsDomDebounce);
+  hsDomDebounce = setTimeout(ensureHsUI, 200);
 });
-hsUrlObserver.observe(document.body, { childList: true, subtree: true });
+hsDomObserver.observe(document.body, { childList: true, subtree: true });
 
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.activeTimer || changes.settings) {
