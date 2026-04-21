@@ -67,7 +67,7 @@ test('smoke: test runner works', () => {
 
 - [ ] **Step 3: Run tests to verify harness works**
 
-Run: `node --test tests/`
+Run: `node --test` (from repo root; auto-discovers `**/*.test.js`)
 Expected: `# pass 1`, exit code 0
 
 - [ ] **Step 4: Commit**
@@ -235,7 +235,7 @@ rm tests/smoke.test.js
 
 - [ ] **Step 4: Run tests, verify all pass**
 
-Run: `node --test tests/`
+Run: `node --test` (from repo root; auto-discovers `**/*.test.js`)
 Expected: `# pass 9`, exit code 0
 
 - [ ] **Step 5: Commit**
@@ -638,7 +638,7 @@ test('buildHsDescription: subject only', () => {
 
 - [ ] **Step 2: Run tests, verify they fail**
 
-Run: `node --test tests/`
+Run: `node --test` (from repo root; auto-discovers `**/*.test.js`)
 Expected: 10 failures ("parseHsUrl is not a function" etc.)
 
 - [ ] **Step 3: Implement the helpers in `shared.js`**
@@ -683,7 +683,7 @@ Add to `api`: `parseHsUrl, parseHsTitle, buildHsDescription`.
 
 - [ ] **Step 4: Run tests, verify all pass**
 
-Run: `node --test tests/`
+Run: `node --test` (from repo root; auto-discovers `**/*.test.js`)
 Expected: all tests pass (19 total now)
 
 - [ ] **Step 5: Commit**
@@ -740,7 +740,7 @@ test('detectTimerSource: unknown description', () => {
 
 - [ ] **Step 2: Run tests, verify failures**
 
-Run: `node --test tests/`
+Run: `node --test` (from repo root; auto-discovers `**/*.test.js`)
 Expected: 4 failures
 
 - [ ] **Step 3: Implement in `shared.js`**
@@ -781,7 +781,7 @@ Add `detectTimerSource` to `api`.
 
 - [ ] **Step 4: Run tests, verify pass**
 
-Run: `node --test tests/`
+Run: `node --test` (from repo root; auto-discovers `**/*.test.js`)
 
 - [ ] **Step 5: Commit**
 
