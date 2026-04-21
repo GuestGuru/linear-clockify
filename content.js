@@ -488,6 +488,14 @@ async function updateButtonState() {
 }
 
 function startElapsedCounter(startedAt) {
+  // Defensive: if a concurrent updateButtonState invocation already set an
+  // interval, clear it first so we don't end up with two intervals writing
+  // conflicting times into the same .lc-elapsed elements.
+  if (elapsedInterval) {
+    clearInterval(elapsedInterval);
+    elapsedInterval = null;
+  }
+
   const elements = document.querySelectorAll('.lc-elapsed');
   if (elements.length === 0) return;
 
