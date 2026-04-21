@@ -217,7 +217,9 @@ async function startTimer(issueKey, issueTitle, teamKey) {
 
   const activeTimer = {
     timeEntryId: entry.id,
+    source: 'linear',
     issueKey,
+    teamKey,
     issueTitle,
     projectName: projectName || null,
     startedAt: body.start,
@@ -271,30 +273,40 @@ async function checkRunningTimer() {
     return;
   }
 
-  const match = entry.description?.match(/^\[([A-Z]+-\d+)\]\s*(.+)$/);
-  if (match) {
-    const externalTimer = {
-      timeEntryId: entry.id,
-      issueKey: match[1],
-      issueTitle: match[2],
-      projectName: null,
-      startedAt: entry.timeInterval.start,
-      external: true,
+  const detected = detectTimerSource(entry.description);
+  const base = {
+    timeEntryId: entry.id,
+    startedAt: entry.timeInterval.start,
+    projectName: null,
+    external: true,
+  };
+
+  let externalTimer;
+  if (detected?.source === 'linear') {
+    externalTimer = {
+      ...base,
+      source: 'linear',
+      issueKey: detected.issueKey,
+      teamKey: detected.teamKey,
+      issueTitle: detected.issueTitle,
     };
-    await chrome.storage.local.set({ activeTimer: externalTimer });
-    updateBadge(externalTimer);
+  } else if (detected?.source === 'hs') {
+    externalTimer = {
+      ...base,
+      source: 'hs',
+      ticketNumber: detected.ticketNumber,
+      issueTitle: detected.issueTitle,
+    };
   } else {
-    const externalTimer = {
-      timeEntryId: entry.id,
-      issueKey: null,
+    externalTimer = {
+      ...base,
+      source: 'unknown',
       issueTitle: entry.description || 'Külső timer',
-      projectName: null,
-      startedAt: entry.timeInterval.start,
-      external: true,
     };
-    await chrome.storage.local.set({ activeTimer: externalTimer });
-    updateBadge(externalTimer);
   }
+
+  await chrome.storage.local.set({ activeTimer: externalTimer });
+  updateBadge(externalTimer);
 }
 
 function updateBadge(activeTimer) {
