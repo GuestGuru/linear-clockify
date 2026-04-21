@@ -381,4 +381,67 @@ function createHsRightPanelCard() {
   hsCardSnapChip.refresh();
 }
 
-console.log('[LC HS] loaded', getConversationContext());
+function tryInsertHsUI() {
+  createHsTimerButton();
+  createHsRightPanelCard();
+  updateHsButtonState();
+
+  // Container is the required element; the sidebar card may not find a match
+  // on some HS layouts — we still consider init successful if the header
+  // button is in place.
+  const container = document.getElementById(HS_BUTTON_CONTAINER_ID);
+  return Boolean(container);
+}
+
+let hsInitObserver = null;
+
+function waitForHsDomAndInit() {
+  if (hsInitObserver) {
+    hsInitObserver.disconnect();
+    hsInitObserver = null;
+  }
+  if (tryInsertHsUI()) return;
+
+  let debounce = null;
+  hsInitObserver = new MutationObserver(() => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      if (tryInsertHsUI()) {
+        hsInitObserver.disconnect();
+        hsInitObserver = null;
+      }
+    }, 200);
+  });
+  hsInitObserver.observe(document.body, { childList: true, subtree: true });
+
+  // Safety: stop watching after 30s
+  setTimeout(() => {
+    if (hsInitObserver) {
+      hsInitObserver.disconnect();
+      hsInitObserver = null;
+    }
+  }, 30000);
+}
+
+let hsLastUrl = window.location.href;
+const hsUrlObserver = new MutationObserver(() => {
+  if (window.location.href !== hsLastUrl) {
+    hsLastUrl = window.location.href;
+    if (parseHsUrl(window.location.pathname)) {
+      waitForHsDomAndInit();
+    }
+  }
+});
+hsUrlObserver.observe(document.body, { childList: true, subtree: true });
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.activeTimer || changes.settings) {
+    updateHsButtonState();
+  }
+});
+
+if (parseHsUrl(window.location.pathname)) {
+  waitForHsDomAndInit();
+}
+
+console.log('[LC HS] content script initialized');
