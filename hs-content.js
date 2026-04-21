@@ -299,10 +299,17 @@ function createHsRightPanelCard() {
   hsCardStartEditor = buildStartEditor();
   hsCardStartEditor.container.id = 'lc-hs-card-start-editor';
 
+  const manualToggleBtn = document.createElement('button');
+  manualToggleBtn.type = 'button';
+  manualToggleBtn.className = 'lc-hs-manual-toggle';
+  manualToggleBtn.textContent = '✎';
+  manualToggleBtn.title = 'Manuális rögzítés';
+
   timerRow.appendChild(button);
   timerRow.appendChild(elapsed);
   timerRow.appendChild(info);
   timerRow.appendChild(hsCardSnapChip.chip);
+  timerRow.appendChild(manualToggleBtn);
 
   elapsed.addEventListener('click', async () => {
     if (!hsCardStartEditor) return;
@@ -316,8 +323,9 @@ function createHsRightPanelCard() {
     }
   });
 
-  const divider = document.createElement('div');
-  divider.className = 'lc-card-divider';
+  const manualWrap = document.createElement('div');
+  manualWrap.className = 'lc-hs-manual-wrap';
+  manualWrap.style.display = 'none';
 
   const manualTitle = document.createElement('div');
   manualTitle.className = 'lc-card-subtitle';
@@ -340,12 +348,19 @@ function createHsRightPanelCard() {
     };
   });
 
+  manualWrap.appendChild(manualTitle);
+  manualWrap.appendChild(form);
+
+  manualToggleBtn.addEventListener('click', () => {
+    const hidden = manualWrap.style.display === 'none';
+    manualWrap.style.display = hidden ? 'block' : 'none';
+    manualToggleBtn.classList.toggle('lc-hs-manual-toggle-active', hidden);
+  });
+
   card.appendChild(title);
   card.appendChild(timerRow);
   card.appendChild(hsCardStartEditor.container);
-  card.appendChild(divider);
-  card.appendChild(manualTitle);
-  card.appendChild(form);
+  card.appendChild(manualWrap);
 
   // Append to body with position:fixed so HS's dynamic DOM can't remove us.
   document.body.appendChild(card);
