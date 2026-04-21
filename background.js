@@ -1,7 +1,7 @@
 // Linear → Clockify Timer — Service Worker
 importScripts('shared.js');
 
-const { detectTimerSource, computeSnapTime, buildHsDescription } = self.LCShared;
+const { detectTimerSource, computeSnapTime, buildHsDescription, isOverlappingEntry } = self.LCShared;
 
 const CLOCKIFY_BASE = 'https://api.clockify.me/api/v1';
 const LINEAR_BASE = 'https://api.linear.app/graphql';
@@ -129,16 +129,12 @@ async function getEntriesInRange(dayStartISO, dayEndISO) {
   return entries || [];
 }
 
-async function findOverlap(startISO, endISO, dayStartISO, dayEndISO) {
+async function findOverlap(startISO, endISO, dayStartISO, dayEndISO, excludeId = null) {
   const entries = await getEntriesInRange(dayStartISO, dayEndISO);
-  const newStart = new Date(startISO).getTime();
-  const newEnd = new Date(endISO).getTime();
   const now = Date.now();
 
   for (const e of entries) {
-    const eStart = new Date(e.timeInterval.start).getTime();
-    const eEnd = e.timeInterval.end ? new Date(e.timeInterval.end).getTime() : now;
-    if (eStart < newEnd && eEnd > newStart) {
+    if (isOverlappingEntry(e, startISO, endISO, now, excludeId)) {
       return e;
     }
   }

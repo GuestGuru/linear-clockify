@@ -136,6 +136,26 @@
     return null;
   }
 
+  // ─── Overlap detection ────────────────────────────────────────────────────
+
+  function floorToMinuteMs(ms) {
+    return Math.floor(ms / 60000) * 60000;
+  }
+
+  function isOverlappingEntry(entry, newStartISO, newEndISO, nowMs, excludeId) {
+    if (!entry?.timeInterval) return false;
+    if (excludeId && entry.id === excludeId) return false;
+
+    const eStart = floorToMinuteMs(new Date(entry.timeInterval.start).getTime());
+    const eEnd = entry.timeInterval.end
+      ? floorToMinuteMs(new Date(entry.timeInterval.end).getTime())
+      : floorToMinuteMs(nowMs);
+    const newStart = new Date(newStartISO).getTime();
+    const newEnd = new Date(newEndISO).getTime();
+
+    return eStart < newEnd && eEnd > newStart;
+  }
+
   // ─── Status helpers ──────────────────────────────────────────────────────
 
   function setStatus(el, kind, text) {
@@ -388,6 +408,7 @@
     detectTimerSource,
     computeSnapTime,
     buildSnapChip,
+    isOverlappingEntry,
   };
 
   global.LCShared = api;

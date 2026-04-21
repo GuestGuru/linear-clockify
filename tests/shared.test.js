@@ -225,3 +225,61 @@ test('computeSnapTime: exactly 30 min gap → null (boundary exclusive)', () => 
   ];
   assert.strictEqual(computeSnapTime(entries, now), null);
 });
+
+// ─── isOverlappingEntry ─────────────────────────────────────────────────────
+
+const { isOverlappingEntry } = require('../shared.js');
+
+function mkEntry(id, startISO, endISO) {
+  return { id, timeInterval: { start: startISO, end: endISO } };
+}
+
+test('isOverlappingEntry: entry ended at new start (minute boundary) → no overlap', () => {
+  const entry = mkEntry('e1', '2026-04-21T09:00:00Z', '2026-04-21T09:30:00Z');
+  const nowMs = new Date('2026-04-21T10:00:00Z').getTime();
+  const overlap = isOverlappingEntry(entry, '2026-04-21T09:30:00Z', '2026-04-21T10:00:00Z', nowMs, null);
+  assert.strictEqual(overlap, false);
+});
+
+test('isOverlappingEntry: entry ended 09:30:27 (second precision) — new entry at 09:30 does NOT overlap (minute floor)', () => {
+  const entry = mkEntry('e1', '2026-04-21T09:00:00Z', '2026-04-21T09:30:27Z');
+  const nowMs = new Date('2026-04-21T10:00:00Z').getTime();
+  const overlap = isOverlappingEntry(entry, '2026-04-21T09:30:00Z', '2026-04-21T10:00:00Z', nowMs, null);
+  assert.strictEqual(overlap, false);
+});
+
+test('isOverlappingEntry: real overlap (entry 09:00-09:45, new 09:30-10:00)', () => {
+  const entry = mkEntry('e1', '2026-04-21T09:00:00Z', '2026-04-21T09:45:00Z');
+  const nowMs = new Date('2026-04-21T10:00:00Z').getTime();
+  const overlap = isOverlappingEntry(entry, '2026-04-21T09:30:00Z', '2026-04-21T10:00:00Z', nowMs, null);
+  assert.strictEqual(overlap, true);
+});
+
+test('isOverlappingEntry: new entry ends exactly at existing start (minute boundary) → no overlap', () => {
+  const entry = mkEntry('e1', '2026-04-21T10:00:00Z', '2026-04-21T11:00:00Z');
+  const nowMs = new Date('2026-04-21T12:00:00Z').getTime();
+  const overlap = isOverlappingEntry(entry, '2026-04-21T09:00:00Z', '2026-04-21T10:00:00Z', nowMs, null);
+  assert.strictEqual(overlap, false);
+});
+
+test('isOverlappingEntry: running entry (no end) — overlap if new range crosses its start time', () => {
+  const entry = mkEntry('e1', '2026-04-21T09:00:00Z', null);
+  const nowMs = new Date('2026-04-21T10:30:00Z').getTime();
+  // New entry 09:30-10:00 overlaps with running timer (09:00 → now=10:30)
+  const overlap = isOverlappingEntry(entry, '2026-04-21T09:30:00Z', '2026-04-21T10:00:00Z', nowMs, null);
+  assert.strictEqual(overlap, true);
+});
+
+test('isOverlappingEntry: excludeId matches → not considered overlap (for editing self)', () => {
+  const entry = mkEntry('e1', '2026-04-21T09:00:00Z', null);
+  const nowMs = new Date('2026-04-21T10:30:00Z').getTime();
+  const overlap = isOverlappingEntry(entry, '2026-04-21T08:00:00Z', '2026-04-21T11:00:00Z', nowMs, 'e1');
+  assert.strictEqual(overlap, false);
+});
+
+test('isOverlappingEntry: excludeId different → entry IS considered', () => {
+  const entry = mkEntry('e1', '2026-04-21T09:00:00Z', '2026-04-21T10:00:00Z');
+  const nowMs = new Date('2026-04-21T11:00:00Z').getTime();
+  const overlap = isOverlappingEntry(entry, '2026-04-21T08:00:00Z', '2026-04-21T09:30:00Z', nowMs, 'e2');
+  assert.strictEqual(overlap, true);
+});
