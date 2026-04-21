@@ -260,18 +260,25 @@ function startHsElapsedCounter(startedAt) {
 }
 
 function findHsSidebarInsertion() {
-  // The right sidebar always contains a distinctive Sidebar.* data-cy element
-  // (customer name/avatar toggle). From that anchor we walk up to the
-  // simplebar-content scroll container, which is stable regardless of whether
-  // lazy panels (Conversations, etc.) have loaded. Prepend our card to it so
-  // it sits at the top of the sidebar.
+  // The right sidebar has a .simplebar-content scroll container whose direct
+  // children are: avatar-toggle, ProfilePanelWrapper, (optional) CollapsablePanel.
+  // We anchor on a distinctive sidebar element, walk up to the simplebar-content,
+  // then walk BACK DOWN to find which top-level child contains the anchor.
+  // Insert our card AFTER that child so we land between customer info and the
+  // Conversations panel. Falls back to prepend if anchor is a direct child.
   const anchor = document.querySelector(
-    '[data-cy="Sidebar.CustomerName"], [data-cy="Sidebar.ViewModeToggle"], [data-testid="contact-properties-section"]'
+    '[data-testid="contact-properties-section"], [data-cy="Sidebar.CustomerName"], [data-cy="Sidebar.ViewModeToggle"]'
   );
   if (!anchor) return null;
   const scroll = anchor.closest('.simplebar-content') || anchor.closest('.simplebar-content-wrapper');
   if (!scroll || scroll.offsetParent === null) return null;
-  return { parent: scroll, afterNode: null };
+
+  let topChild = anchor;
+  while (topChild.parentElement && topChild.parentElement !== scroll) {
+    topChild = topChild.parentElement;
+  }
+  if (topChild.parentElement !== scroll) return null;
+  return { parent: scroll, afterNode: topChild };
 }
 
 function createHsRightPanelCard() {
