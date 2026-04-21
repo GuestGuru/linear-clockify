@@ -119,7 +119,7 @@ async function handleHsButtonClick(event) {
       button.textContent = '⏳ Stopping…';
       const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
       console.log('[LC HS] stopTimer ←', result);
-      if (result.error) showHsError(result.error);
+      if (result.error) showHsError(result.error, { issueKey: result.issueKey });
     } else if (activeTimer && !activeTimer.external) {
       button.textContent = '⏳ Switching…';
       const result = await chrome.runtime.sendMessage({
@@ -127,7 +127,7 @@ async function handleHsButtonClick(event) {
         data: ctx,
       });
       console.log('[LC HS] stopAndStartHsTimer ←', result);
-      if (result.error) showHsError(result.error);
+      if (result.error) showHsError(result.error, { issueKey: result.issueKey });
       if (result.warning) showHsWarning(result.warning);
     } else {
       button.textContent = '⏳ Starting…';
@@ -136,7 +136,7 @@ async function handleHsButtonClick(event) {
         data: ctx,
       });
       console.log('[LC HS] startHsTimer ←', result);
-      if (result.error) showHsError(result.error);
+      if (result.error) showHsError(result.error, { issueKey: result.issueKey });
       if (result.warning) showHsWarning(result.warning);
     }
   } catch (err) {
@@ -151,16 +151,28 @@ async function handleHsButtonClick(event) {
   }
 }
 
-function showHsError(message) {
+function showHsError(message, extra = {}) {
   const info = document.getElementById('lc-hs-info');
   if (!info) return;
+  info.style.display = 'inline';
+  info.textContent = '';
+
   if (message === 'NO_API_KEY') {
-    info.style.display = 'inline';
-    info.textContent = '';
     info.appendChild(createSettingsLink());
     return;
   }
-  info.style.display = 'inline';
+  if (message === 'LINEAR_CONFIG_MISSING') {
+    const span = document.createElement('span');
+    span.textContent = 'Linear beállítás szükséges: ';
+    info.appendChild(span);
+    info.appendChild(createSettingsLink());
+    return;
+  }
+  if (message === 'ORPHAN_LINEAR_ISSUE') {
+    info.textContent = `❌ Árva Linear issue (${extra.issueKey || '?'}) — ellenőrizd Linear-ben, vagy próbáld újra.`;
+    setTimeout(() => { info.style.display = 'none'; }, 8000);
+    return;
+  }
   info.textContent = `❌ ${message}`;
   setTimeout(() => { info.style.display = 'none'; }, 5000);
 }

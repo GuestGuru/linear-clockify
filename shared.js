@@ -714,7 +714,11 @@
         if (result?.error === 'OVERLAP') {
           setStatus(status, 'error', `Átfedés: ${result.conflictWith}`);
         } else if (result?.error === 'NO_API_KEY') {
-          setStatus(status, 'error', 'Beállítás szükséges');
+          setStatus(status, 'error', 'Beállítás szükséges (Clockify)');
+        } else if (result?.error === 'LINEAR_CONFIG_MISSING') {
+          setStatus(status, 'error', 'Beállítás szükséges (Linear)');
+        } else if (result?.error === 'ORPHAN_LINEAR_ISSUE') {
+          setStatus(status, 'error', `Árva Linear issue: ${result.issueKey}. Ellenőrizd Linear-ben.`);
         } else if (result?.error) {
           setStatus(status, 'error', result.error);
         } else {
