@@ -53,12 +53,197 @@
     return { start: start.toISOString(), end: end.toISOString() };
   }
 
+  // ─── Status helpers ──────────────────────────────────────────────────────
+
+  function setStatus(el, kind, text) {
+    el.style.display = 'block';
+    el.className = `lc-status lc-status-${kind}`;
+    el.textContent = text;
+  }
+
+  function clearStatus(el) {
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+
+  function createSettingsLink() {
+    const link = document.createElement('a');
+    link.href = '#';
+    link.className = 'lc-settings-link';
+    link.textContent = '⚙️ Beállítás szükséges';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.runtime.sendMessage({ action: 'openOptions' });
+    });
+    return link;
+  }
+
+  // ─── Manual entry form builder ───────────────────────────────────────────
+
+  function buildManualEntryForm() {
+    const form = document.createElement('form');
+    form.className = 'lc-manual-form';
+
+    const row = document.createElement('div');
+    row.className = 'lc-form-row';
+
+    const from = document.createElement('input');
+    from.type = 'text';
+    from.className = 'lc-time-input';
+    from.placeholder = 'mettől';
+    from.inputMode = 'numeric';
+    from.autocomplete = 'off';
+    from.maxLength = 5;
+
+    const dash = document.createElement('span');
+    dash.className = 'lc-dash';
+    dash.textContent = '–';
+
+    const to = document.createElement('input');
+    to.type = 'text';
+    to.className = 'lc-time-input';
+    to.placeholder = 'meddig';
+    to.inputMode = 'numeric';
+    to.autocomplete = 'off';
+    to.maxLength = 5;
+
+    const dateChip = document.createElement('button');
+    dateChip.type = 'button';
+    dateChip.className = 'lc-date-chip';
+    dateChip.textContent = '📅 Ma';
+
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.className = 'lc-date-input';
+    dateInput.value = todayStr();
+    dateInput.style.display = 'none';
+
+    const updateDateChip = () => {
+      const today = todayStr();
+      dateChip.textContent = dateInput.value === today ? '📅 Ma' : `📅 ${dateInput.value}`;
+    };
+
+    dateChip.addEventListener('click', () => {
+      const wasHidden = dateInput.style.display === 'none';
+      dateInput.style.display = wasHidden ? 'inline-block' : 'none';
+      if (wasHidden) dateInput.focus();
+    });
+    dateInput.addEventListener('change', () => {
+      updateDateChip();
+      dateInput.style.display = 'none';
+    });
+
+    [from, to].forEach((input) => {
+      input.addEventListener('blur', () => {
+        if (!input.value) return;
+        const parsed = parseTimeInput(input.value);
+        if (parsed) input.value = formatHM(parsed);
+      });
+    });
+
+    row.appendChild(from);
+    row.appendChild(dash);
+    row.appendChild(to);
+    row.appendChild(dateChip);
+    row.appendChild(dateInput);
+
+    const submitRow = document.createElement('div');
+    submitRow.className = 'lc-form-submit-row';
+
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.className = 'lc-submit-btn';
+    submit.textContent = 'Rögzít';
+
+    const status = document.createElement('div');
+    status.className = 'lc-status';
+    status.style.display = 'none';
+
+    submitRow.appendChild(submit);
+
+    form.appendChild(row);
+    form.appendChild(submitRow);
+    form.appendChild(status);
+
+    return { form, fields: { from, to, dateInput, submit, status } };
+  }
+
+  /**
+   * Attach a submit handler that parses the form, calls `buildPayload` to get a
+   * chrome.runtime.sendMessage body, and shows status.
+   *
+   * @param {HTMLFormElement} form
+   * @param {object} fields - from buildManualEntryForm
+   * @param {(ctx: {startISO: string, endISO: string, dayStart: string, dayEnd: string}) =>
+   *         Promise<{action: string, data: object}> | {action: string, data: object}} buildPayload
+   */
+  function attachManualEntrySubmit(form, fields, buildPayload) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { from, to, dateInput, submit, status } = fields;
+      clearStatus(status);
+
+      const parsedFrom = parseTimeInput(from.value);
+      const parsedTo = parseTimeInput(to.value);
+
+      if (!parsedFrom || !parsedTo) {
+        setStatus(status, 'error', 'Érvénytelen időformátum (pl. 1413 → 14:13)');
+        return;
+      }
+      from.value = formatHM(parsedFrom);
+      to.value = formatHM(parsedTo);
+
+      const fromMin = parsedFrom.h * 60 + parsedFrom.m;
+      const toMin = parsedTo.h * 60 + parsedTo.m;
+      if (fromMin >= toMin) {
+        setStatus(status, 'error', 'A „Meddig" nagyobb kell legyen, mint a „Mettől"');
+        return;
+      }
+
+      const dateStr = dateInput.value || todayStr();
+      const startISO = localTimeToISO(dateStr, parsedFrom.h, parsedFrom.m);
+      const endISO = localTimeToISO(dateStr, parsedTo.h, parsedTo.m);
+      const { start: dayStart, end: dayEnd } = dayBoundsISO(dateStr);
+
+      submit.disabled = true;
+      setStatus(status, 'info', 'Mentés…');
+
+      try {
+        const payload = await buildPayload({ startISO, endISO, dayStart, dayEnd });
+        const result = await chrome.runtime.sendMessage(payload);
+
+        if (result?.error === 'OVERLAP') {
+          setStatus(status, 'error', `Átfedés: ${result.conflictWith}`);
+        } else if (result?.error === 'NO_API_KEY') {
+          setStatus(status, 'error', 'Beállítás szükséges');
+        } else if (result?.error) {
+          setStatus(status, 'error', result.error);
+        } else {
+          const msg = result?.warning ? `Rögzítve ✓ — ${result.warning}` : 'Rögzítve ✓';
+          setStatus(status, 'success', msg);
+          from.value = '';
+          to.value = '';
+          setTimeout(() => clearStatus(status), 4000);
+        }
+      } catch (err) {
+        setStatus(status, 'error', err.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  }
+
   const api = {
     parseTimeInput,
     formatHM,
     todayStr,
     localTimeToISO,
     dayBoundsISO,
+    setStatus,
+    clearStatus,
+    createSettingsLink,
+    buildManualEntryForm,
+    attachManualEntrySubmit,
   };
 
   global.LCShared = api;
