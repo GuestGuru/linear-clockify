@@ -1,6 +1,6 @@
 # Linear → Clockify Timer
 
-Chrome extension ami a Linear issue oldalán megjelenít egy Clockify time tracker gombot. A gomb elindítja/leállítja a Clockify timert, automatikusan kitölti a projektet és a leírást a Linear issue adatai alapján.
+Chrome extension Clockify time-trackerhez, Linear + HelpScout integrációval. Az extension ikonjára kattintva nyíló popupból indítasz/leállítasz timert a jelenlegi Linear issue vagy HelpScout conversation alapján, automatikusan kitöltött projekttel és leírással.
 
 ## Telepítés
 
@@ -8,55 +8,44 @@ Chrome extension ami a Linear issue oldalán megjelenít egy Clockify time track
 
 1. Telepítsd az extensiont a [Chrome Web Store](https://chrome.google.com/webstore/detail/TODO) oldalról
 2. Extension ikon → **Options** → Clockify és Linear API key megadása
-3. Nyiss egy Linear issue-t → használd a timer gombot
+3. Nyiss egy Linear issue-t vagy HelpScout conversationt → kattints az extension ikonjára
 
 ### Kézi telepítés (fejlesztőknek)
 
 1. `chrome://extensions/` → **Developer mode** bekapcsolása
 2. **Load unpacked** → válaszd ki ezt a mappát (`linear-clockify/`)
 3. Extension ikon → **Options** → Clockify és Linear API key megadása
-4. Nyiss egy Linear issue-t → használd a timer gombot
+4. Nyiss egy Linear issue-t vagy HelpScout conversationt → kattints az extension ikonjára
 
 ## Funkciók
 
-### Timer gomb a Linear issue oldalon
+Minden UI a **toolbar popupban** él (extension ikonra kattintás). Az oldalakba nem injektálunk widgetet — a content script csak annyit csinál, hogy a popup kérésére visszaadja a jelenlegi oldal kontextusát (Linear issue key/team/title, HelpScout conv id/subject/customer/emails).
 
-Minden `linear.app/gghq/issue/*` oldalon megjelenik:
+### Popup — Start szekció
 
-| Állapot | Gomb | Szín |
-|---|---|---|
-| Nincs futó timer | ▶ Start | Zöld |
-| Ezen az issue-n fut | ⏹ Stop + eltelt idő | Piros |
-| Másik issue-n fut | ⏹ Stop & ▶ Start | Sárga |
+Ha a jelenlegi tab Linear issue vagy HelpScout conversation, és nem fut timer, a popup tetején megjelenik egy Start szekció:
 
-### HelpScout timer
+- **Context sor** — issue key / HS ticket szám + cím
+- **▶ Start** — timer indítása most
+- **↶ HH:MM Start** (snap gomb) — ha az előző entry vége 30 percen belül volt, az exact lezárás időpontjától indít (nincs lyuk); kikapcsolható a Clockify oldalán
+- **✎ Manuális** — mettől/meddig + dátumválasztó; lezárt Clockify entry-t rögzít (nem indít futó timert), átfedés-ellenőrzéssel
 
-Minden `secure.helpscout.net/conversation/*` oldalon és a jobb oldali panelen megjelenik egy Clockify card:
+### Popup — Futó timer
 
-| Állapot | Gombok |
-|---|---|
-| Nincs futó timer | `▶ Start` |
-| Ezen a ticketen fut | `⏹ Stop` + `✓ Stop & Done` |
-| Másik ticketen fut | `⏹ Stop` + `✓ Stop & Done` |
+Ha fut egy timer, a Legutóbbi bejegyzések listában a top sor pirossal kiemelve, a végidő mezőben élő eltelt időt mutat (`MM:SS` 60 perc alatt, `HH:MM` felett), alatta:
 
-A **Stop & Done** leállítja a futó Clockify timert, és a kapcsolódó Linear issue-t `Done` state-re állítja. Ha Linear-ben még nincs config vagy külső timer fut (pl. másik eszközről), a Done gomb nem jelenik meg.
+- **⏹ Stop** — timer leállítása
+- **✓ Stop & Done** (csak Linear-alapú timerre, ha van teljes Linear config) — timer stop + a Linear issue `Done` state-re állítva
 
-### Manuális időrögzítés
+HelpScout-ból indított timernél: ha nincs még Linear issue a conversationhöz, az első Start automatikusan létrehoz egyet (attachment linkkel), így a Stop & Done működik.
 
-A Linear issue jobb paneljén (desktop) megjelenik egy Clockify card a projektválasztó alatt. Tartalma:
+### Popup — Legutóbbi bejegyzések
 
-- Duplikált Start/Stop gomb
-- **Mettől / Meddig** input (pl. `1413` → `14:13`, Tab → `1500` → `15:00`)
-- Dátumválasztó (alapból „Ma")
-- **Rögzít** gomb → lezárt Clockify entry-t hoz létre (nem indít futó timert)
+A popup alján a legutóbbi Clockify entry-k (alapból 3, Options-ben 1–20). Soronként:
 
-Átfedés-ellenőrzés: ha a megadott időtartamra már van Clockify entry (vagy fut egy timer), a mentés blokkolva, és megjelenik a konfliktus.
-
-Mobilon a lebegő timer container mellett van egy **✎** gomb, ami kinyitja ugyanezt a formot.
-
-### Toolbar popup
-
-Az extension ikon kattintásra a **Legutóbbi bejegyzések** listáját mutatja (alapból 3, Options-ben 1–20 közé állítható). A Linear link mellett egy `HS` link is megjelenik, ha az entry HelpScout ticketből indult — közvetlenül a conversation-re visz. A futó entry piros kerettel kiemelve: a végidő mezőben folyamatosan mutatja az eltelt időt (`MM:SS` 60 perc alatt, `HH:MM` felett), alatta pedig `⏹ Stop` + `✓ Stop & Done` gombok.
+- Linear link (`TEAM-123`) és/vagy `HS` link — közvetlen ugrás az issue / conversation oldalra
+- Leírás, start/end idő inline szerkeszthető (pl. `1413` → `14:13`), Tab/blur ment
+- Időtartam, **▶** (timer indítása ugyanezekkel az adatokkal) és **×** (törlés kétlépcsős megerősítéssel)
 
 ### Automatikus Clockify mapping
 
@@ -104,10 +93,11 @@ Az extension Options oldalán (`jobb klikk az ikonon → Options`):
 
 ```
 manifest.json       Manifest V3 config
-background.js       Service worker — Clockify API, timer state, badge
-content.js          Linear oldalba injektált — gomb renderelés
-styles.css          Gomb stílusok
-popup.html/js       Toolbar popup
+background.js       Service worker — Clockify/Linear API, timer state, badge
+content.js          Linear oldalba injektált — page context resolver (popup kérésére)
+hs-content.js       HelpScout oldalba injektált — page context resolver (popup kérésére)
+shared.js           Közös helperek (background + hs-content + popup)
+popup.html/js       Toolbar popup — teljes UI
 options.html/js     Beállítások
 icons/              Extension ikonok
 ```

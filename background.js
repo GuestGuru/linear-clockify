@@ -916,10 +916,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const { activeTimer } = await chrome.storage.local.get('activeTimer');
           return { activeTimer: activeTimer || null };
         }
-        case 'openOptions': {
-          chrome.runtime.openOptionsPage();
-          return { success: true };
-        }
         case 'setSnapEnabled': {
           const settings = await getSettings();
           const next = { ...settings, snapEnabled: !!message.data.enabled };

@@ -16,14 +16,12 @@
   "content_scripts": [
     {
       "matches": ["https://linear.app/*"],
-      "js": ["shared.js", "content.js"],
-      "css": ["styles.css"],
+      "js": ["content.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://secure.helpscout.net/conversation/*"],
       "js": ["shared.js", "hs-content.js"],
-      "css": ["styles.css"],
       "run_at": "document_idle"
     }
   ],
