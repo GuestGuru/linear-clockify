@@ -154,6 +154,15 @@
     return new Date(latestEnd).toISOString();
   }
 
+  // ─── Linear issue key parsing ───────────────────────────────────────────
+
+  function parseTeamKeyFromIssueKey(issueKey) {
+    if (typeof issueKey !== 'string' || !issueKey) return null;
+    const m = issueKey.match(/^([A-Za-z]+)-(\d+)$/);
+    if (!m) return null;
+    return m[1].toUpperCase();
+  }
+
   // ─── Timer source detection ──────────────────────────────────────────────
 
   function detectTimerSource(description) {
@@ -824,6 +833,7 @@
     linearRequest,
     linearFindOrCreateIssue,
     OrphanIssueError,
+    parseTeamKeyFromIssueKey,
     createConvLock,
     detectTimerSource,
     computeSnapTime,

@@ -435,3 +435,27 @@ test('detectTimerSource: HS-sourced timers with [LIN-xxx] prefix are classified 
   assert.strictEqual(detected.issueKey, 'LIN-1234');
   assert.strictEqual(detected.teamKey, 'LIN');
 });
+
+// ─── parseTeamKeyFromIssueKey ───────────────────────────────────────────
+
+const { parseTeamKeyFromIssueKey } = require('../shared.js');
+
+test('parseTeamKeyFromIssueKey extracts team key from valid issue key', () => {
+  assert.strictEqual(parseTeamKeyFromIssueKey('TUL-14'), 'TUL');
+  assert.strictEqual(parseTeamKeyFromIssueKey('IT-1'), 'IT');
+  assert.strictEqual(parseTeamKeyFromIssueKey('GG-9999'), 'GG');
+});
+
+test('parseTeamKeyFromIssueKey returns null on missing or malformed input', () => {
+  assert.strictEqual(parseTeamKeyFromIssueKey(''), null);
+  assert.strictEqual(parseTeamKeyFromIssueKey(null), null);
+  assert.strictEqual(parseTeamKeyFromIssueKey(undefined), null);
+  assert.strictEqual(parseTeamKeyFromIssueKey('no-dash'), null);
+  assert.strictEqual(parseTeamKeyFromIssueKey('-14'), null);
+  assert.strictEqual(parseTeamKeyFromIssueKey('TUL-'), null);
+  assert.strictEqual(parseTeamKeyFromIssueKey('TUL-abc'), null);
+});
+
+test('parseTeamKeyFromIssueKey handles lowercase team keys by uppercasing', () => {
+  assert.strictEqual(parseTeamKeyFromIssueKey('tul-14'), 'TUL');
+});
