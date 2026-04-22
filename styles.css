@@ -31,6 +31,13 @@
 .lc-btn-start { background-color: #22c55e; }
 .lc-btn-stop { background-color: #ef4444; }
 .lc-btn-switch { background-color: #eab308; color: #1a1a1a; }
+.lc-btn-done { background-color: #059669; }
+.lc-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 
 .lc-elapsed {
   font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
