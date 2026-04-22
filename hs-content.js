@@ -61,6 +61,12 @@ function createHsTimerButton() {
   button.className = 'lc-btn lc-btn-start';
   button.textContent = '▶ Start';
 
+  const doneButton = document.createElement('button');
+  doneButton.id = 'lc-hs-timer-done-button';
+  doneButton.className = 'lc-btn lc-btn-done';
+  doneButton.textContent = '✓ Stop & Done';
+  doneButton.style.display = 'none';
+
   const elapsed = document.createElement('span');
   elapsed.id = 'lc-hs-elapsed';
   elapsed.className = 'lc-elapsed';
@@ -78,6 +84,7 @@ function createHsTimerButton() {
   hsMainStartEditor.container.id = 'lc-hs-start-editor';
 
   container.appendChild(button);
+  container.appendChild(doneButton);
   container.appendChild(elapsed);
   container.appendChild(info);
   container.appendChild(hsMainSnapChip.chip);
@@ -98,6 +105,7 @@ function createHsTimerButton() {
   anchor.appendChild(container);
 
   button.addEventListener('click', handleHsButtonClick);
+  doneButton.addEventListener('click', handleHsDoneButtonClick);
   updateHsButtonState();
   hsMainSnapChip.refresh();
 }
@@ -381,6 +389,13 @@ function createHsRightPanelCard() {
   button.className = 'lc-btn lc-btn-start';
   button.textContent = '▶ Start';
 
+  const doneButton = document.createElement('button');
+  doneButton.type = 'button';
+  doneButton.id = 'lc-hs-card-timer-done-button';
+  doneButton.className = 'lc-btn lc-btn-done';
+  doneButton.textContent = '✓ Stop & Done';
+  doneButton.style.display = 'none';
+
   const elapsed = document.createElement('span');
   elapsed.id = 'lc-hs-card-elapsed';
   elapsed.className = 'lc-elapsed';
@@ -404,6 +419,7 @@ function createHsRightPanelCard() {
   manualToggleBtn.title = 'Manuális rögzítés';
 
   timerRow.appendChild(button);
+  timerRow.appendChild(doneButton);
   timerRow.appendChild(elapsed);
   timerRow.appendChild(info);
   timerRow.appendChild(hsCardSnapChip.chip);
@@ -469,6 +485,7 @@ function createHsRightPanelCard() {
   document.body.appendChild(card);
 
   button.addEventListener('click', handleHsButtonClick);
+  doneButton.addEventListener('click', handleHsDoneButtonClick);
   hsCardSnapChip.refresh();
 }
 
