@@ -380,7 +380,7 @@ async function createHsManualEntry(ctx) {
   return { success: true, warning };
 }
 
-async function startTimer(issueKey, issueTitle, teamKey) {
+async function startTimer(issueKey, issueTitle, teamKey, startOverrideISO = null) {
   const settings = await getSettings();
   const projectName = settings.teamMapping[teamKey];
   let projectId = null;
@@ -396,7 +396,7 @@ async function startTimer(issueKey, issueTitle, teamKey) {
   }
 
   const body = {
-    start: await resolveStartTime(),
+    start: startOverrideISO || await resolveStartTime(),
     description: `[${issueKey}] ${issueTitle}`,
   };
   if (projectId) {
@@ -424,7 +424,7 @@ async function startTimer(issueKey, issueTitle, teamKey) {
 }
 
 async function startHsTimer(ctx) {
-  const { ticketNumber, subject, customer, convId } = ctx;
+  const { ticketNumber, subject, customer, convId, startOverrideISO } = ctx;
   const settings = await getSettings();
 
   const linear = await resolveHsLinearIssue(ctx);
@@ -440,7 +440,7 @@ async function startHsTimer(ctx) {
   }
 
   const body = {
-    start: await resolveStartTime(),
+    start: startOverrideISO || await resolveStartTime(),
     description: buildHsDescription({ issueKey, ticketNumber, subject, customer, hsConvIdLong: convId }),
   };
   if (projectId) body.projectId = projectId;
@@ -464,6 +464,60 @@ async function startHsTimer(ctx) {
   updateBadge(activeTimer);
 
   return { success: true, warning };
+}
+
+async function startFromEntry(entryId) {
+  if (!entryId) return { error: 'Hiányzó entry azonosító' };
+
+  const { activeTimer } = await chrome.storage.local.get('activeTimer');
+  if (activeTimer && !activeTimer.external) {
+    return { error: 'ALREADY_RUNNING' };
+  }
+
+  const settings = await getSettings();
+  const source = await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries/${entryId}`
+  );
+  if (!source) return { error: 'Nem található entry' };
+
+  const description = source.description || '';
+  const linMatch = description.match(/\[([A-Z]+-\d+)\]/);
+  const hsMatch = description.match(/\[HS:\s*(\d+)\]/);
+  const issueKey = linMatch ? linMatch[1] : null;
+  const teamKey = linMatch ? linMatch[1].split('-')[0] : null;
+  const issueTitle = description
+    .replace(linMatch ? linMatch[0] : '', '')
+    .replace(hsMatch ? hsMatch[0] : '', '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const body = {
+    start: new Date().toISOString(),
+    description,
+    billable: source.billable,
+  };
+  if (source.projectId) body.projectId = source.projectId;
+  if (source.taskId) body.taskId = source.taskId;
+  if (source.tagIds?.length) body.tagIds = source.tagIds;
+
+  const entry = await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries`,
+    { method: 'POST', body: JSON.stringify(body) }
+  );
+
+  const newActive = {
+    timeEntryId: entry.id,
+    source: hsMatch ? 'hs' : 'linear',
+    issueKey,
+    teamKey,
+    issueTitle: issueTitle || (issueKey || '(leírás nélkül)'),
+    projectName: null,
+    startedAt: body.start,
+  };
+  await chrome.storage.local.set({ activeTimer: newActive });
+  updateBadge(newActive);
+
+  return { success: true };
 }
 
 async function getRecentEntries(pageSize = 3) {
@@ -788,8 +842,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       switch (message.action) {
         case 'startTimer': {
-          const { issueKey, issueTitle, teamKey } = message.data;
-          return await startTimer(issueKey, issueTitle, teamKey);
+          const { issueKey, issueTitle, teamKey, startOverrideISO } = message.data;
+          return await startTimer(issueKey, issueTitle, teamKey, startOverrideISO || null);
         }
         case 'stopTimer': {
           return await stopTimer();
@@ -809,8 +863,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         case 'stopAndStartTimer': {
           await stopTimer();
-          const { issueKey, issueTitle, teamKey } = message.data;
-          return await startTimer(issueKey, issueTitle, teamKey);
+          const { issueKey, issueTitle, teamKey, startOverrideISO } = message.data;
+          return await startTimer(issueKey, issueTitle, teamKey, startOverrideISO || null);
         }
         case 'createManualEntry': {
           const { issueKey, issueTitle, teamKey, start, end, dayStart, dayEnd } = message.data;
@@ -818,6 +872,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         case 'startHsTimer': {
           return await startHsTimer(message.data);
+        }
+        case 'startFromEntry': {
+          return await startFromEntry(message.data?.entryId);
         }
         case 'stopAndDoneTimer': {
           const { activeTimer } = await chrome.storage.local.get('activeTimer');
