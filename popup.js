@@ -77,11 +77,18 @@ async function render() {
   startElapsed(activeTimer.startedAt);
 
   if (!activeTimer.external) {
+    const linearConfigComplete = !!(
+      settings?.linearApiKey && settings?.linearDefaultTeamId &&
+      settings?.linearViewerId && settings?.linearInProgressStateId
+    );
+    let doneBtn = null;
+
     const stopBtn = document.createElement('button');
     stopBtn.className = 'stop-btn';
     stopBtn.textContent = '⏹ Stop';
     stopBtn.addEventListener('click', async () => {
       stopBtn.disabled = true;
+      if (doneBtn) doneBtn.disabled = true;
       const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
       if (result.error) {
         const errEl = document.createElement('div');
@@ -90,11 +97,43 @@ async function render() {
         errEl.textContent = result.error;
         content.appendChild(errEl);
         stopBtn.disabled = false;
+        if (doneBtn) doneBtn.disabled = false;
       } else {
         render();
       }
     });
     content.appendChild(stopBtn);
+
+    if (activeTimer.issueKey && linearConfigComplete) {
+      doneBtn = document.createElement('button');
+      doneBtn.className = 'done-btn';
+      doneBtn.textContent = '✓ Stop & Done';
+      doneBtn.addEventListener('click', async () => {
+        stopBtn.disabled = true;
+        doneBtn.disabled = true;
+        const result = await chrome.runtime.sendMessage({ action: 'stopAndDoneTimer' });
+        if (result.error) {
+          const errEl = document.createElement('div');
+          errEl.className = 'error';
+          errEl.style.display = 'block';
+          errEl.textContent = result.error;
+          content.appendChild(errEl);
+          stopBtn.disabled = false;
+          doneBtn.disabled = false;
+          return;
+        }
+        if (result.warning) {
+          const warnEl = document.createElement('div');
+          warnEl.className = 'error';
+          warnEl.style.display = 'block';
+          warnEl.style.color = '#eab308';
+          warnEl.textContent = `⚠️ ${result.warning}`;
+          content.appendChild(warnEl);
+        }
+        render();
+      });
+      content.appendChild(doneBtn);
+    }
   }
 
   appendSettingsLink();
