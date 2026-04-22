@@ -209,6 +209,69 @@ async function resolveLinearDoneStateId(teamKey) {
   return stateId;
 }
 
+async function markLinearIssueDone(issueKey) {
+  if (!issueKey) return { error: 'NO_ISSUE_KEY' };
+  const teamKey = parseTeamKeyFromIssueKey(issueKey);
+  if (!teamKey) return { error: `Érvénytelen issue key: ${issueKey}` };
+
+  const settings = await getSettings();
+  const linearConfig = getLinearConfig(settings);
+  if (!isLinearConfigComplete(linearConfig)) {
+    return { error: 'LINEAR_CONFIG_MISSING' };
+  }
+
+  const match = issueKey.match(/^([A-Za-z]+)-(\d+)$/);
+  if (!match) return { error: `Érvénytelen issue key: ${issueKey}` };
+  const issueNumber = Number(match[2]);
+
+  let stateId;
+  try {
+    stateId = await resolveLinearDoneStateId(teamKey);
+  } catch (err) {
+    return { error: `Linear Done state lookup: ${err.message}` };
+  }
+  if (!stateId) {
+    return { error: `Linear 'Done' state nem található a(z) ${teamKey} team-hez` };
+  }
+
+  const lookupQuery = `query($teamKey: String!, $number: Float!) {
+    issues(filter: { team: { key: { eq: $teamKey } }, number: { eq: $number } }, first: 1) {
+      nodes { id }
+    }
+  }`;
+  let issueId;
+  try {
+    const lookupData = await linearRequest({
+      query: lookupQuery,
+      variables: { teamKey, number: issueNumber },
+      apiKey: settings.linearApiKey,
+      fetchFn: fetch,
+    });
+    issueId = lookupData?.issues?.nodes?.[0]?.id;
+  } catch (err) {
+    return { error: `Linear issue lookup: ${err.message}` };
+  }
+  if (!issueId) return { error: `Linear issue nem található: ${issueKey}` };
+
+  const mutation = `mutation($id: String!, $input: IssueUpdateInput!) {
+    issueUpdate(id: $id, input: $input) { success }
+  }`;
+  try {
+    const updateData = await linearRequest({
+      query: mutation,
+      variables: { id: issueId, input: { stateId } },
+      apiKey: settings.linearApiKey,
+      fetchFn: fetch,
+    });
+    if (!updateData?.issueUpdate?.success) {
+      return { error: 'Linear issueUpdate nem járt sikerrel' };
+    }
+    return { success: true };
+  } catch (err) {
+    return { error: `Linear issueUpdate: ${err.message}` };
+  }
+}
+
 async function getEntriesInRange(dayStartISO, dayEndISO) {
   const settings = await getSettings();
   const userId = await getUserId();
