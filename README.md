@@ -4,18 +4,21 @@ Chrome extension Clockify time-trackerhez, Linear + HelpScout integrációval. A
 
 ## Telepítés
 
-### Chrome Web Store (ajánlott)
+Az extension még nincs fent a Chrome Web Store-on, ezért letöltött zip fájlból kell telepíteni.
 
-1. Telepítsd az extensiont a [Chrome Web Store](https://chrome.google.com/webstore/detail/TODO) oldalról
-2. Extension ikon → **Options** → Clockify és Linear API key megadása
-3. Nyiss egy Linear issue-t vagy HelpScout conversationt → kattints az extension ikonjára
+**→ Letöltés + részletes útmutató: [docs/TELEPITES.md](docs/TELEPITES.md)**
 
-### Kézi telepítés (fejlesztőknek)
+Rövid verzió:
 
-1. `chrome://extensions/` → **Developer mode** bekapcsolása
-2. **Load unpacked** → válaszd ki ezt a mappát (`linear-clockify/`)
-3. Extension ikon → **Options** → Clockify és Linear API key megadása
-4. Nyiss egy Linear issue-t vagy HelpScout conversationt → kattints az extension ikonjára
+1. Töltsd le a zipet: https://guestguru.github.io/linear-clockify/ (vagy közvetlenül a [legfrissebb release](https://github.com/GuestGuru/linear-clockify/releases/latest))
+2. Csomagold ki egy állandó mappába (ne mozgasd utána!)
+3. `chrome://extensions/` → **Developer mode** ON → **Load unpacked** → válaszd a mappát
+4. Extension ikon → **Options** → Clockify és Linear API key megadása
+5. Nyiss egy Linear issue-t vagy HelpScout conversationt → kattints az extension ikonjára
+
+### Fejlesztőknek
+
+Ha a repót klónozod (nem zipet töltesz le): `chrome://extensions/` → Developer mode ON → Load unpacked → válaszd ki a repo gyökerét.
 
 ## Funkciók
 
@@ -100,4 +103,27 @@ shared.js           Közös helperek (background + hs-content + popup)
 popup.html/js       Toolbar popup — teljes UI
 options.html/js     Beállítások
 icons/              Extension ikonok
+build-zip.sh        Terjeszthető zip generálása
+scripts/release.sh  Verzió bump + git tag helper
+.github/workflows/  CI — tag-push triggerre release + zip upload
+docs/index.html     GitHub Pages landing (letöltő oldal)
+docs/TELEPITES.md   Végfelhasználói telepítési útmutató
+docs/QA-CHECKLIST.md Manual QA lista release előtt
 ```
+
+## Release kiadás
+
+Új verzió kiadása:
+
+```bash
+./scripts/release.sh patch   # 1.0.0 -> 1.0.1 (patch/minor/major vagy X.Y.Z)
+git push && git push origin vX.Y.Z
+```
+
+Mi történik:
+
+1. A script bumpolja a `manifest.json` `version` mezőt, commitolja és létrehozza a `vX.Y.Z` taget (push még nem).
+2. A tag pusholása után a `.github/workflows/release.yml` lefut: ellenőrzi hogy a tag és a manifest verzió egyezik-e, lefuttatja a `build-zip.sh`-t, létrehozza a GitHub Release-t és feltölti a `linear-clockify.zip`-et asset-ként.
+3. A `https://guestguru.github.io/linear-clockify/` landing page letöltő gombja automatikusan az új release zipjére mutat (`releases/latest/download/linear-clockify.zip`).
+
+Fejlesztés közbeni gyors zip builderhez workflow nélkül: `./build-zip.sh`.

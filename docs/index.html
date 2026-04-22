@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear → Clockify Timer — letöltés</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --card: #fff;
+    --border: #e5e5e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f0f10;
+      --fg: #e5e5e5;
+      --muted: #a0a0a0;
+      --accent: #818cf8;
+      --accent-hover: #a5b4fc;
+      --card: #1a1a1c;
+      --border: #2a2a2d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.55;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.75rem;
+    margin: 0 0 0.5rem;
+  }
+  .tagline {
+    color: var(--muted);
+    margin: 0 0 2rem;
+  }
+  .download-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .download-btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    padding: 0.85rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1.05rem;
+    transition: background 0.15s;
+  }
+  .download-btn:hover {
+    background: var(--accent-hover);
+  }
+  .meta {
+    display: block;
+    margin-top: 0.75rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .meta a {
+    color: var(--muted);
+  }
+  h2 {
+    font-size: 1.15rem;
+    margin: 2rem 0 0.75rem;
+  }
+  ol, ul {
+    padding-left: 1.25rem;
+  }
+  li {
+    margin-bottom: 0.4rem;
+  }
+  code {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  .note {
+    background: var(--card);
+    border-left: 3px solid var(--accent);
+    padding: 0.75rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 1rem 0;
+    font-size: 0.95rem;
+  }
+  a { color: var(--accent); }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Linear → Clockify Timer</h1>
+<p class="tagline">Chrome extension — Clockify time-tracker Linear és HelpScout integrációval.</p>
+
+<div class="download-card">
+  <a class="download-btn" href="https://github.com/GuestGuru/linear-clockify/releases/latest/download/linear-clockify.zip">
+    ⬇ Letöltés (linear-clockify.zip)
+  </a>
+  <span class="meta">
+    Mindig a legfrissebb verzió. <a href="https://github.com/GuestGuru/linear-clockify/releases">Korábbi release-ek</a>.
+  </span>
+</div>
+
+<div class="note">
+  <strong>Miért kell zipből telepíteni?</strong> Az extension még nincs fent a Chrome Web Store-on (review alatt), addig kézzel kell telepíteni. Egyszeri ~5 perc.
+</div>
+
+<h2>Telepítés röviden</h2>
+<ol>
+  <li>Töltsd le a zipet (fenti gomb)</li>
+  <li>Csomagold ki egy <strong>állandó</strong> mappába (pl. <code>~/Applications/linear-clockify/</code>) — ne mozgasd utána!</li>
+  <li>Nyisd meg: <code>chrome://extensions/</code></li>
+  <li>Jobb felül: <strong>Developer mode</strong> ON</li>
+  <li>Bal felül: <strong>Load unpacked</strong> → válaszd ki a kicsomagolt mappát</li>
+  <li>Tűzd ki a toolbarra (🧩 puzzle ikon → pin)</li>
+  <li>Jobb klikk az extension ikonon → <strong>Options</strong> → Clockify + Linear API key beillesztése</li>
+</ol>
+
+<p><a href="https://github.com/GuestGuru/linear-clockify/blob/main/docs/TELEPITES.md"><strong>→ Részletes, képernyőképes útmutató</strong></a></p>
+
+<h2>Frissítés</h2>
+<p>Ha új verzió jön ki, töltsd le a zipet újra, csomagold ki <strong>ugyanabba a mappába</strong> (felülírva), majd a <code>chrome://extensions/</code> oldalon nyomj a 🔄 <strong>Reload</strong> gombra a kártyán.</p>
+
+<footer>
+  <a href="https://github.com/GuestGuru/linear-clockify">GitHub repo</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/GuestGuru/linear-clockify/blob/main/docs/TELEPITES.md">Telepítés</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/GuestGuru/linear-clockify/blob/main/README.md">README</a>
+</footer>
+
+</main>
+</body>
+</html>

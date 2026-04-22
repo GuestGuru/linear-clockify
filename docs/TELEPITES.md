@@ -1,10 +1,22 @@
 # Linear → Clockify Timer — Telepítési útmutató
 
-Ez a Chrome extension egy Clockify time tracker gombot tesz a Linear issue oldalakra. Indítja/leállítja a timert, automatikusan kitölti a projektet és a leírást.
+Ez a Chrome extension Clockify time-tracker gombot tesz a Linear issue és HelpScout conversation oldalakra. Indítja/leállítja a timert, automatikusan kitölti a projektet és a leírást.
 
-## 1. Zip fájl kicsomagolása
+> Az extension még nincs fent a Chrome Web Store-on (review alatt), ezért **kézzel kell telepíteni** egy letöltött zip fájlból. Ez egyszeri ~5 perc.
 
-Kaptál egy `linear-clockify.zip` fájlt. **Csomagold ki egy olyan mappába, ahol hosszú távon is lesz** — például:
+## 1. Zip letöltése
+
+Menj a letöltő oldalra és nyomd meg a nagy letöltés gombot:
+
+**→ https://guestguru.github.io/linear-clockify/**
+
+Vagy közvetlenül a legfrissebb release fájlra:
+
+**→ https://github.com/GuestGuru/linear-clockify/releases/latest/download/linear-clockify.zip**
+
+## 2. Zip kicsomagolása
+
+**Csomagold ki egy olyan mappába, ahol hosszú távon is lesz** — például:
 
 - macOS: `~/Applications/linear-clockify/` vagy `~/Documents/chrome-extensions/linear-clockify/`
 - Windows: `C:\ChromeExtensions\linear-clockify\`
@@ -25,20 +37,30 @@ linear-clockify/
 └── ...
 ```
 
-## 2. Chrome Developer mode bekapcsolása
+## 3. Developer mode + Load unpacked
 
-1. Nyisd meg a Chrome-ban ezt a címet: `chrome://extensions/`
+1. Nyisd meg a Chrome-ban: `chrome://extensions/`
 2. A jobb felső sarokban kapcsold be a **Developer mode** (Fejlesztői mód) kapcsolót
+3. Bal felül megjelenik 3 gomb — kattints a **Load unpacked** (Kicsomagolt bővítmény betöltése) gombra
 
-## 3. Extension betöltése
+![chrome://extensions — Developer mode toggle jobb felül, Load unpacked gomb bal felül](screenshots/developer-mode.png)
 
-1. Még mindig a `chrome://extensions/` oldalon: kattints a **Load unpacked** (Kicsomagolt bővítmény betöltése) gombra — bal felül jelent meg, miután bekapcsoltad a Developer mode-ot
-2. Válaszd ki azt a mappát, ahová az 1. lépésben kicsomagoltad a zipet (pl. `linear-clockify/`)
-3. Az extensionnek meg kell jelennie a listában **Linear → Clockify Timer** néven
+4. A megnyíló mappaválasztóban **válaszd ki azt a mappát, amelyikben közvetlenül ott van a `manifest.json`** (pl. `linear-clockify/`)
+5. Az extensionnek meg kell jelennie a listában **Linear → Clockify Timer** néven
 
-Ha a pin ikonra (🧩 puzzle, jobb felső sarok) rákattintasz és kitűzöd az extensiont, látszik majd az eszköztáron.
+## 4. Extension kitűzése (pin)
 
-## 4. API kulcsok beszerzése
+Hogy mindig lásd az ikont, tűzd ki a toolbarra:
+
+1. Kattints a 🧩 **puzzle ikonra** a Chrome jobb felső sarkában
+2. A listában keresd meg a **Linear → Clockify Timer** sort
+3. Kattints mellette a **pin ikonra** (áthúzott pin → normál pin)
+
+![Puzzle ikon menüje, benne Linear → Clockify Timer pin gombbal](screenshots/pin.png)
+
+Ezután az extension ikonja megjelenik a címsor jobb oldalán, onnan egy kattintással elérhető.
+
+## 5. API kulcsok beszerzése
 
 Az extension két API kulcsot kér a beállításokban.
 
@@ -55,27 +77,36 @@ Az extension két API kulcsot kér a beállításokban.
 3. **New API key** → adj neki egy nevet (pl. `linear-clockify-extension`)
 4. Másold ki a kulcsot (ez is csak egyszer látszik!)
 
-## 5. API kulcsok megadása az extensionben
+## 6. API kulcsok megadása az extensionben
 
-1. Kattints jobb gombbal az extension ikonjára → **Options**
+1. Kattints **jobb gombbal** az extension ikonjára → **Options**
    *(vagy: `chrome://extensions/` → **Linear → Clockify Timer** kártya → **Details** → **Extension options**)*
 2. Illeszd be a **Clockify API key** és **Linear API key** mezőkbe a kulcsokat
 3. **Mentés**
 
-## 6. Használat
+## 7. Használat
 
-1. Nyiss egy Linear issue-t (pl. `https://linear.app/gghq/issue/...`)
-2. Az issue fejlécén megjelenik egy **▶ Start** gomb
-3. Kattints rá → elindul a Clockify timer a megfelelő projekttel és leírással
-4. Ha újra rákattintasz **⏹ Stop** → leáll a timer
-5. Ha másik issue-n is nyomsz Startot, az előző automatikusan leáll
+1. Nyiss egy Linear issue-t vagy HelpScout conversationt
+2. Kattints az extension ikonjára a toolbaron
+3. A popup tetején megjelenik a **▶ Start** gomb → kattints rá → elindul a Clockify timer a megfelelő projekttel és leírással
+4. Stop ugyanúgy a popupból
 
-A jobb oldali panelen megjelenik egy **Clockify card** is, ahol manuálisan (mettől-meddig) is rögzíthetsz időt.
+Részletes funkcióleírás: [README.md](../README.md).
+
+## Frissítés új verzióra
+
+Ha új release jött ki:
+
+1. Töltsd le az új zipet (1. pont)
+2. Csomagold ki **ugyanabba a mappába**, felülírva a régi fájlokat
+   *(vagy: töröld a régi mappa tartalmát és csomagold oda az újat)*
+3. `chrome://extensions/` → **Linear → Clockify Timer** kártyán a **🔄 Reload** gomb
+4. Az új verzió azonnal aktív
 
 ## Gyakori hibák
 
 **„This extension may have been corrupted" vagy „Load unpacked failed"**
-→ Valószínűleg nem a megfelelő mappát választottad ki. Azt a mappát kell kiválasztani, amelyikben közvetlenül ott van a `manifest.json`.
+→ Valószínűleg nem a megfelelő mappát választottad ki. Azt a mappát kell kiválasztani, amelyikben **közvetlenül ott van** a `manifest.json`.
 
 **„Developer mode extensions" figyelmeztetés Chrome indításkor**
 → Ez normál, mert nem a Chrome Web Store-ból telepítettük. Nyugodtan nyomd meg a **Keep** / **Maradjon** gombot.
@@ -86,61 +117,5 @@ A jobb oldali panelen megjelenik egy **Clockify card** is, ahol manuálisan (met
 **„Invalid API key" hiba**
 → Ellenőrizd az Options oldalon, hogy a helyes kulcsot másoltad-e be, szóközök nélkül. Ha kétséges, generálj újat.
 
-**Nem jelenik meg a timer gomb a Linear issue-n**
-→ Frissítsd az oldalt (Cmd/Ctrl + R). Ha továbbra sem látszik, ellenőrizd, hogy az URL `https://linear.app/gghq/...` alatt van-e.
-
-## Frissítés új verzióra
-
-Amikor új zip fájlt kapsz:
-
-1. Csomagold ki **ugyanabba a mappába**, felülírva a régi fájlokat
-   *(vagy törölheted a régi mappa tartalmát és kicsomagolod oda az újat)*
-2. `chrome://extensions/` → **Linear → Clockify Timer** kártyán a **🔄 Reload** gomb
-3. Az új verzió azonnal aktív
-
-## Linear integráció tesztelés (manual QA)
-
-### Setup
-- [ ] Linear API key a `linear.app/settings/api`-ból generálva
-- [ ] Options oldalon → Linear API key beírva → "🔎 Linear teszt" zöld visszajelzést ad
-- [ ] TUL team kiválasztva a dropdown-ból
-- [ ] Save → "Beállítások mentve"
-
-### Happy path — új conversation
-- [ ] Menj egy olyan HS conv-re, amire még nem indítottál timert
-- [ ] Kattints ▶ Start
-- [ ] Linear-ben: új issue a TUL-ban, In Progress, téged assignolt, title = `{subject} [HS: #{short}]`, description-ben partner név + HS link
-- [ ] Linear issue sidebarján: Helpscout attachment a conv URL-jével
-- [ ] Clockify-ban: futó timer `[LIN-xxx] {subject} — {customer}` leírással
-- [ ] HS oldalon: a gomb Stop-ra vált
-
-### Happy path — meglévő conversation
-- [ ] Kattints ▶ Start újra ugyanazon a conv-n
-- [ ] Linear-ben: **ugyanaz** az issue (nem új), a Clockify ugyanazt a LIN-xxx-t kapja
-
-### Manuális rögzítés
-- [ ] Friss HS conv, töltsd ki a "Mettől – Meddig" mezőket, kattints Rögzít
-- [ ] Clockify-ban: historikus entry `[LIN-xxx] ...` leírással
-- [ ] Linear-ben: az issue is létrejött (attachment-tel)
-
-### Konfiguráció hiány
-- [ ] Töröld a `linearDefaultTeamId`-t a DevTools-ból:
-      `chrome.storage.local.get('settings').then(({settings}) => chrome.storage.local.set({settings: {...settings, linearDefaultTeamId: ''}}));`
-- [ ] Start gombra → "Linear beállítás szükséges" + link az options-ra
-- [ ] Clockify timer NEM indult
-- [ ] Állítsd vissza, happy path újra működik
-
-### Lezárt issue megőrzése
-- [ ] Egy meglévő issue-t kézzel zárj le Linear-ben (state = Done)
-- [ ] Kattints újra Start-ra a HS conv-n
-- [ ] Linear-ben: az issue marad Done-ban (**nem** kerül vissza In Progress-be) — manuálisan kell reopen-elned
-
-### Stop & Done gomb
-- [ ] HS timer start A ticketen → navigálj B ticketre → `⏹ Stop` → timer leáll, A Linear issue marad `In Progress`-ben
-- [ ] HS timer start A ticketen → navigálj B ticketre → `✓ Stop & Done` → timer leáll, A Linear issue `Done` state-re vált
-- [ ] HS timer start A ticketen (ugyanazon a ticketen maradsz) → `✓ Stop & Done` → timer leáll, A Linear issue `Done`
-- [ ] Extension popup: futó timer → `⏹ Stop` → leáll, issue változatlan
-- [ ] Extension popup: futó timer → `✓ Stop & Done` → leáll, Linear issue Done
-- [ ] Extension popup: külső (másik eszközön indított) timer → csak `⏹ Stop` látszik, `Stop & Done` nincs
-- [ ] Ha Linear config hiányzik, HS-ben nincs timer gomb, popup-ban csak Stop (nem Done)
-- [ ] Első Stop & Done lassabb (GraphQL lookup); második ugyanazon team-en gyors (cache)
+**Nem jelenik meg az extension ikonja a toolbaron**
+→ Kattints a 🧩 puzzle ikonra (4. lépés), és tűzd ki onnan.
