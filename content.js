@@ -480,9 +480,11 @@ async function updateButtonState() {
     applyButtonState(button, elapsed, info, state, activeTimer);
   });
 
-  // Hide snap chip while the timer for *this* issue is running. The chip
-  // re-appears inside the elapsed-click start-editor instead.
-  const hideSnap = state === 'stop';
+  // Hide snap chip whenever a timer is already running (stop or switch).
+  // In `stop` it re-appears inside the elapsed-click start-editor.
+  // In `switch` there's nothing to snap to — the new timer starts the
+  // instant the current one is stopped, so no gap exists.
+  const hideSnap = state !== 'start';
   if (mainSnapChip) mainSnapChip.setForcedHidden(hideSnap);
   if (cardSnapChip) cardSnapChip.setForcedHidden(hideSnap);
 

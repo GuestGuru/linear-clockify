@@ -306,9 +306,11 @@ async function updateHsButtonState() {
   });
 
   // Snap chip doesn't belong next to a running local timer — it only makes
-  // sense for Start or inside the elapsed-click start-editor. Hide when the
-  // active timer is the one for *this* conv (state === 'stop').
-  const hideSnap = state === 'stop';
+  // sense for Start or inside the elapsed-click start-editor. Hide for both
+  // `stop` (timer on *this* conv) and `switch` (timer on another conv); in
+  // the switch case the new timer starts the instant the current stops, so
+  // there's no gap to snap over.
+  const hideSnap = state !== 'start';
   if (hsMainSnapChip) hsMainSnapChip.setForcedHidden(hideSnap);
   if (hsCardSnapChip) hsCardSnapChip.setForcedHidden(hideSnap);
 
