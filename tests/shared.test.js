@@ -459,3 +459,40 @@ test('parseTeamKeyFromIssueKey returns null on missing or malformed input', () =
 test('parseTeamKeyFromIssueKey handles lowercase team keys by uppercasing', () => {
   assert.strictEqual(parseTeamKeyFromIssueKey('tul-14'), 'TUL');
 });
+
+// ─── pickCompletedState ──────────────────────────────────────────────────
+
+const { pickCompletedState } = require('../shared.js');
+
+test('pickCompletedState prefers state named "Done"', () => {
+  const states = [
+    { id: 's1', name: 'Completed', type: 'completed' },
+    { id: 's2', name: 'Done',      type: 'completed' },
+    { id: 's3', name: 'Shipped',   type: 'completed' },
+  ];
+  assert.strictEqual(pickCompletedState(states), 's2');
+});
+
+test('pickCompletedState falls back to first state of type "completed"', () => {
+  const states = [
+    { id: 's1', name: 'Backlog',  type: 'backlog' },
+    { id: 's2', name: 'Shipped',  type: 'completed' },
+    { id: 's3', name: 'Archived', type: 'completed' },
+  ];
+  assert.strictEqual(pickCompletedState(states), 's2');
+});
+
+test('pickCompletedState returns null when no completed state present', () => {
+  const states = [
+    { id: 's1', name: 'Backlog',   type: 'backlog' },
+    { id: 's2', name: 'Todo',      type: 'unstarted' },
+    { id: 's3', name: 'Cancelled', type: 'canceled' },
+  ];
+  assert.strictEqual(pickCompletedState(states), null);
+});
+
+test('pickCompletedState returns null on non-array input', () => {
+  assert.strictEqual(pickCompletedState(null), null);
+  assert.strictEqual(pickCompletedState(undefined), null);
+  assert.strictEqual(pickCompletedState({}), null);
+});

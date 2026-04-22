@@ -235,6 +235,18 @@
     return body.data;
   }
 
+  // ─── Linear state picker ────────────────────────────────────────────────
+
+  function pickCompletedState(stateNodes) {
+    if (!Array.isArray(stateNodes)) return null;
+    const byName = stateNodes.find(
+      (s) => s && s.type === 'completed' && s.name === 'Done'
+    );
+    if (byName) return byName.id;
+    const byType = stateNodes.find((s) => s && s.type === 'completed');
+    return byType ? byType.id : null;
+  }
+
   // ─── Linear: find-or-create issue for HS conversation ──────────────────
 
   class OrphanIssueError extends Error {
@@ -834,6 +846,7 @@
     linearFindOrCreateIssue,
     OrphanIssueError,
     parseTeamKeyFromIssueKey,
+    pickCompletedState,
     createConvLock,
     detectTimerSource,
     computeSnapTime,
