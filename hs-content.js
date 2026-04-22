@@ -173,6 +173,11 @@ function showHsError(message, extra = {}) {
     setTimeout(() => { info.style.display = 'none'; }, 8000);
     return;
   }
+  if (typeof message === 'string' && message.includes('LINEAR_FORBIDDEN')) {
+    info.textContent = '❌ A Linear API key jogosultsága nem elég issue-létrehozásra. Generálj újat a linear.app/settings/api-n (default scope-pal).';
+    setTimeout(() => { info.style.display = 'none'; }, 12000);
+    return;
+  }
   info.textContent = `❌ ${message}`;
   setTimeout(() => { info.style.display = 'none'; }, 5000);
 }

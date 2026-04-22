@@ -196,21 +196,34 @@
       },
       body: JSON.stringify({ query, variables: variables || {} }),
     });
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       throw new Error('LINEAR_AUTH');
     }
     if (response.status === 429) {
       throw new Error('LINEAR_RATE_LIMIT');
     }
+    // Linear returns structured GraphQL errors even on non-2xx (400 with body).
+    // Parse the body as JSON first so the caller sees the real error message
+    // instead of the raw envelope. Falls back to raw text if not JSON.
+    let body = null;
+    try {
+      body = await response.json();
+    } catch {
+      const text = typeof response.text === 'function' ? await response.text() : '';
+      if (!response.ok) throw new Error(`Linear API ${response.status}: ${text}`);
+    }
+    if (body?.errors?.length) {
+      const first = body.errors[0];
+      const code = first.extensions?.code;
+      if (code === 'FORBIDDEN' || code === 'AUTHENTICATION_ERROR') {
+        throw new Error(`LINEAR_FORBIDDEN: ${first.message}`);
+      }
+      throw new Error(first.message || 'Linear GraphQL error');
+    }
     if (!response.ok) {
-      const body = typeof response.text === 'function' ? await response.text() : '';
-      throw new Error(`Linear API ${response.status}: ${body}`);
+      throw new Error(`Linear API ${response.status}`);
     }
-    const json = await response.json();
-    if (json.errors?.length) {
-      throw new Error(json.errors[0].message || 'Linear GraphQL error');
-    }
-    return json.data;
+    return body.data;
   }
 
   // ─── Linear: find-or-create issue for HS conversation ──────────────────
