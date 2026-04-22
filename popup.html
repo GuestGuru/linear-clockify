@@ -153,6 +153,41 @@
       text-align: center;
       padding: 8px 0;
     }
+    .recent-pagination {
+      display: none;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .recent-page-btn {
+      background: transparent;
+      border: 1px solid #3a3a55;
+      color: #888;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .recent-page-btn:hover:not(:disabled) {
+      color: #a78bfa;
+      border-color: #a78bfa;
+    }
+    .recent-page-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .recent-page-label {
+      color: #888;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
     .recent-play {
       margin-left: auto;
       background: transparent;

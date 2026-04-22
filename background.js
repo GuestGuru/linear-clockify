@@ -520,11 +520,11 @@ async function startFromEntry(entryId) {
   return { success: true };
 }
 
-async function getRecentEntries(pageSize = 3) {
+async function getRecentEntries(pageSize = 3, page = 1) {
   const settings = await getSettings();
   const userId = await getUserId();
   const entries = await clockifyFetch(
-    `/workspaces/${settings.workspaceId}/user/${userId}/time-entries?page-size=${pageSize}`
+    `/workspaces/${settings.workspaceId}/user/${userId}/time-entries?page-size=${pageSize}&page=${page}`
   );
   return entries || [];
 }
@@ -852,7 +852,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return await updateTimerStart(message.data.newStartISO);
         }
         case 'getRecentEntries': {
-          const entries = await getRecentEntries(message.data?.pageSize || 3);
+          const entries = await getRecentEntries(
+            message.data?.pageSize || 3,
+            message.data?.page || 1,
+          );
           return { entries };
         }
         case 'updateEntryTimes': {

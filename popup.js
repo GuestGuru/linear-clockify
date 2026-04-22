@@ -9,6 +9,7 @@ const LINEAR_WORKSPACE = 'gghq';
 const content = document.getElementById('content');
 let elapsedInterval = null;
 let renderGeneration = 0;
+let currentRecentPage = 1;
 
 document.getElementById('settings-link').addEventListener('click', (e) => {
   e.preventDefault();
@@ -404,13 +405,10 @@ async function renderRecent(activeTimer, settings, gen, hasLocalTimer) {
   list.className = 'recent-list';
   content.appendChild(list);
 
-  const loading = document.createElement('div');
-  loading.className = 'spinner-center';
-  const spinnerEl = document.createElement('span');
-  spinnerEl.className = 'spinner';
-  loading.appendChild(spinnerEl);
-  loading.appendChild(document.createTextNode('Betöltés…'));
-  list.appendChild(loading);
+  const pagination = document.createElement('div');
+  pagination.className = 'recent-pagination';
+  pagination.style.display = 'none';
+  content.appendChild(pagination);
 
   const rawCount = settings?.recentEntriesCount;
   const parsedCount = Number.parseInt(rawCount, 10);
@@ -418,32 +416,90 @@ async function renderRecent(activeTimer, settings, gen, hasLocalTimer) {
     ? Math.min(20, Math.max(1, parsedCount))
     : 3;
 
-  try {
-    const result = await chrome.runtime.sendMessage({
-      action: 'getRecentEntries',
-      data: { pageSize },
-    });
-    if (isStale()) return;
-    loading.remove();
-    const entries = result?.entries || [];
-    if (entries.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'recent-empty';
-      empty.textContent = 'Még nincs bejegyzés';
-      list.appendChild(empty);
+  let hasMore = false;
+
+  function renderPagination() {
+    pagination.textContent = '';
+    if (currentRecentPage === 1 && !hasMore) {
+      pagination.style.display = 'none';
       return;
     }
-    for (const entry of entries) {
-      list.appendChild(buildRecentRow(entry, activeTimer, settings, hasLocalTimer));
-    }
-  } catch (err) {
-    if (isStale()) return;
-    loading.remove();
-    const errEl = document.createElement('div');
-    errEl.className = 'recent-empty';
-    errEl.textContent = `Hiba: ${err.message}`;
-    list.appendChild(errEl);
+    pagination.style.display = 'flex';
+
+    const prev = document.createElement('button');
+    prev.className = 'recent-page-btn';
+    prev.type = 'button';
+    prev.textContent = '‹';
+    prev.disabled = currentRecentPage === 1;
+    prev.addEventListener('click', () => {
+      if (currentRecentPage > 1) loadPage(currentRecentPage - 1);
+    });
+
+    const label = document.createElement('span');
+    label.className = 'recent-page-label';
+    label.textContent = `${currentRecentPage}. oldal`;
+
+    const next = document.createElement('button');
+    next.className = 'recent-page-btn';
+    next.type = 'button';
+    next.textContent = '›';
+    next.disabled = !hasMore;
+    next.addEventListener('click', () => {
+      if (hasMore) loadPage(currentRecentPage + 1);
+    });
+
+    pagination.appendChild(prev);
+    pagination.appendChild(label);
+    pagination.appendChild(next);
   }
+
+  async function loadPage(page) {
+    currentRecentPage = page;
+    list.textContent = '';
+    pagination.style.display = 'none';
+
+    const loading = document.createElement('div');
+    loading.className = 'spinner-center';
+    const spinnerEl = document.createElement('span');
+    spinnerEl.className = 'spinner';
+    loading.appendChild(spinnerEl);
+    loading.appendChild(document.createTextNode('Betöltés…'));
+    list.appendChild(loading);
+
+    try {
+      const result = await chrome.runtime.sendMessage({
+        action: 'getRecentEntries',
+        data: { pageSize, page },
+      });
+      if (isStale()) return;
+      list.textContent = '';
+      const entries = result?.entries || [];
+      hasMore = entries.length === pageSize;
+
+      if (entries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'recent-empty';
+        empty.textContent = page === 1 ? 'Még nincs bejegyzés' : 'Nincs több bejegyzés';
+        list.appendChild(empty);
+      } else {
+        for (const entry of entries) {
+          list.appendChild(buildRecentRow(entry, activeTimer, settings, hasLocalTimer));
+        }
+      }
+      renderPagination();
+    } catch (err) {
+      if (isStale()) return;
+      list.textContent = '';
+      hasMore = false;
+      const errEl = document.createElement('div');
+      errEl.className = 'recent-empty';
+      errEl.textContent = `Hiba: ${err.message}`;
+      list.appendChild(errEl);
+      renderPagination();
+    }
+  }
+
+  await loadPage(currentRecentPage);
 }
 
 async function getActiveTabInfo() {
@@ -811,6 +867,7 @@ async function render() {
   const gen = ++renderGeneration;
   const isStale = () => gen !== renderGeneration;
 
+  currentRecentPage = 1;
   content.textContent = '';
   if (elapsedInterval) {
     clearInterval(elapsedInterval);
