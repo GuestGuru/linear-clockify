@@ -18,7 +18,6 @@ FILES=(
   popup.js
   options.html
   options.js
-  styles.css
   privacy-policy.html
   icons
 )
