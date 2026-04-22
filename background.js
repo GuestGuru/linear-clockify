@@ -2,7 +2,8 @@
 importScripts('shared.js');
 
 const { detectTimerSource, computeSnapTime, buildHsDescription, isOverlappingEntry,
-        linearRequest, linearFindOrCreateIssue, OrphanIssueError, createConvLock } = self.LCShared;
+        linearRequest, linearFindOrCreateIssue, OrphanIssueError, createConvLock,
+        parseTeamKeyFromIssueKey, pickCompletedState } = self.LCShared;
 
 const convLock = createConvLock();
 
@@ -174,6 +175,38 @@ function pickInProgressState(stateNodes) {
   if (byName) return byName.id;
   const byType = stateNodes.find((s) => s.type === 'started');
   return byType ? byType.id : null;
+}
+
+async function resolveLinearDoneStateId(teamKey) {
+  if (!teamKey) return null;
+  const settings = await getSettings();
+  if (!settings.linearApiKey) return null;
+
+  const stored = await chrome.storage.local.get('linearDoneStateByTeam');
+  const cache = stored.linearDoneStateByTeam || {};
+  if (cache[teamKey]) return cache[teamKey];
+
+  const query = `query($teamKey: String!) {
+    teams(filter: { key: { eq: $teamKey } }, first: 1) {
+      nodes { id states { nodes { id name type } } }
+    }
+  }`;
+
+  console.log('[LC BG] linear → done state', teamKey);
+  const data = await linearRequest({
+    query,
+    variables: { teamKey },
+    apiKey: settings.linearApiKey,
+    fetchFn: fetch,
+  });
+  const team = data?.teams?.nodes?.[0];
+  if (!team) return null;
+  const stateId = pickCompletedState(team.states?.nodes || []);
+  if (!stateId) return null;
+
+  cache[teamKey] = stateId;
+  await chrome.storage.local.set({ linearDoneStateByTeam: cache });
+  return stateId;
 }
 
 async function getEntriesInRange(dayStartISO, dayEndISO) {
