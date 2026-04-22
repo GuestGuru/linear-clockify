@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Linear → Clockify Timer — letöltés</title>
+<title>Linear → Clockify Timer — telepítés</title>
 <style>
   :root {
     --bg: #fafafa;
@@ -13,6 +13,9 @@
     --accent-hover: #4338ca;
     --card: #fff;
     --border: #e5e5e5;
+    --warn-bg: #fef3c7;
+    --warn-border: #f59e0b;
+    --warn-fg: #78350f;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -23,23 +26,26 @@
       --accent-hover: #a5b4fc;
       --card: #1a1a1c;
       --border: #2a2a2d;
+      --warn-bg: #3a2f12;
+      --warn-border: #d97706;
+      --warn-fg: #fcd34d;
     }
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    padding: 2rem 1rem;
+    padding: 2rem 1rem 4rem;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     background: var(--bg);
     color: var(--fg);
-    line-height: 1.55;
+    line-height: 1.6;
   }
   main {
-    max-width: 640px;
+    max-width: 720px;
     margin: 0 auto;
   }
   h1 {
-    font-size: 1.75rem;
+    font-size: 1.85rem;
     margin: 0 0 0.5rem;
   }
   .tagline {
@@ -52,13 +58,14 @@
     border-radius: 12px;
     padding: 1.5rem;
     margin-bottom: 2rem;
+    text-align: center;
   }
   .download-btn {
     display: inline-block;
     background: var(--accent);
     color: #fff;
     text-decoration: none;
-    padding: 0.85rem 1.5rem;
+    padding: 0.95rem 1.75rem;
     border-radius: 8px;
     font-weight: 600;
     font-size: 1.05rem;
@@ -73,25 +80,46 @@
     color: var(--muted);
     font-size: 0.9rem;
   }
-  .meta a {
-    color: var(--muted);
-  }
   h2 {
-    font-size: 1.15rem;
-    margin: 2rem 0 0.75rem;
+    font-size: 1.25rem;
+    margin: 2.5rem 0 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  h3 {
+    font-size: 1.05rem;
+    margin: 1.5rem 0 0.5rem;
   }
   ol, ul {
-    padding-left: 1.25rem;
+    padding-left: 1.4rem;
   }
   li {
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.45rem;
   }
+  li > ul, li > ol { margin-top: 0.3rem; }
   code {
     background: var(--card);
     border: 1px solid var(--border);
     padding: 0.1rem 0.4rem;
     border-radius: 4px;
     font-size: 0.9em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  pre {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
   }
   .note {
     background: var(--card);
@@ -101,7 +129,33 @@
     margin: 1rem 0;
     font-size: 0.95rem;
   }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn-border);
+    color: var(--warn-fg);
+    padding: 0.75rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 1rem 0;
+    font-size: 0.95rem;
+  }
+  img.screenshot {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
   a { color: var(--accent); }
+  a:hover { color: var(--accent-hover); }
+  dl dt {
+    font-weight: 600;
+    margin-top: 1rem;
+  }
+  dl dd {
+    margin: 0.3rem 0 0 0;
+    color: var(--muted);
+  }
   footer {
     margin-top: 3rem;
     padding-top: 1.5rem;
@@ -115,43 +169,149 @@
 <main>
 
 <h1>Linear → Clockify Timer</h1>
-<p class="tagline">Chrome extension — Clockify time-tracker Linear és HelpScout integrációval.</p>
+<p class="tagline">Chrome extension — Clockify time-tracker Linear és HelpScout integrációval. Egyszeri ~5 perc telepítés.</p>
 
 <div class="download-card">
   <a class="download-btn" href="https://github.com/GuestGuru/linear-clockify/releases/latest/download/linear-clockify.zip">
     ⬇ Letöltés (linear-clockify.zip)
   </a>
   <span class="meta">
-    Mindig a legfrissebb verzió. <a href="https://github.com/GuestGuru/linear-clockify/releases">Korábbi release-ek</a>.
+    Mindig a legfrissebb verzió.
   </span>
 </div>
 
 <div class="note">
-  <strong>Miért kell zipből telepíteni?</strong> Az extension még nincs fent a Chrome Web Store-on (review alatt), addig kézzel kell telepíteni. Egyszeri ~5 perc.
+  <strong>Miért kell zipből telepíteni?</strong> Az extension még nincs fent a Chrome Web Store-on (review alatt), addig kézzel kell telepíteni. Ha egyszer kész, áttérünk a Web Store-ra és erre nem kell majd emlékezned.
 </div>
 
-<h2>Telepítés röviden</h2>
+<h2>1. Zip kicsomagolása</h2>
+
+<p>Csomagold ki a letöltött <code>linear-clockify.zip</code> fájlt egy <strong>olyan mappába, ahol hosszú távon is lesz</strong> — például:</p>
+
+<ul>
+  <li><strong>macOS:</strong> <code>~/Applications/linear-clockify/</code> vagy <code>~/Documents/chrome-extensions/linear-clockify/</code></li>
+  <li><strong>Windows:</strong> <code>C:\ChromeExtensions\linear-clockify\</code></li>
+</ul>
+
+<div class="warn">
+  ⚠️ <strong>Fontos:</strong> a kicsomagolás után <strong>ne mozgasd és ne töröld</strong> ezt a mappát! A Chrome minden indításkor innen olvassa be az extensiont. Ha elmozdítod, az extension eltűnik és újra kell tölteni.
+</div>
+
+<p>A kicsomagolás után a mappában ilyen fájloknak kell lenniük:</p>
+
+<pre><code>linear-clockify/
+├── manifest.json
+├── background.js
+├── content.js
+├── hs-content.js
+├── popup.html
+├── options.html
+├── icons/
+└── ...</code></pre>
+
+<h2>2. Developer mode + Load unpacked</h2>
+
 <ol>
-  <li>Töltsd le a zipet (fenti gomb)</li>
-  <li>Csomagold ki egy <strong>állandó</strong> mappába (pl. <code>~/Applications/linear-clockify/</code>) — ne mozgasd utána!</li>
-  <li>Nyisd meg: <code>chrome://extensions/</code></li>
-  <li>Jobb felül: <strong>Developer mode</strong> ON</li>
-  <li>Bal felül: <strong>Load unpacked</strong> → válaszd ki a kicsomagolt mappát</li>
-  <li>Tűzd ki a toolbarra (🧩 puzzle ikon → pin)</li>
-  <li>Jobb klikk az extension ikonon → <strong>Options</strong> → Clockify + Linear API key beillesztése</li>
+  <li>Nyisd meg a Chrome-ban: <code>chrome://extensions/</code></li>
+  <li>A jobb felső sarokban kapcsold be a <strong>Developer mode</strong> (Fejlesztői mód) kapcsolót</li>
+  <li>Bal felül megjelenik 3 gomb — kattints a <strong>Load unpacked</strong> (Kicsomagolt bővítmény betöltése) gombra</li>
 </ol>
 
-<p><a href="https://github.com/GuestGuru/linear-clockify/blob/main/docs/TELEPITES.md"><strong>→ Részletes, képernyőképes útmutató</strong></a></p>
+<img class="screenshot" src="screenshots/developer-mode.png" alt="chrome://extensions — Developer mode toggle jobb felül, Load unpacked gomb bal felül">
 
-<h2>Frissítés</h2>
-<p>Ha új verzió jön ki, töltsd le a zipet újra, csomagold ki <strong>ugyanabba a mappába</strong> (felülírva), majd a <code>chrome://extensions/</code> oldalon nyomj a 🔄 <strong>Reload</strong> gombra a kártyán.</p>
+<ol start="4">
+  <li>A megnyíló mappaválasztóban <strong>válaszd ki azt a mappát, amelyikben közvetlenül ott van a <code>manifest.json</code></strong> (pl. <code>linear-clockify/</code>)</li>
+  <li>Az extensionnek meg kell jelennie a listában <strong>Linear → Clockify Timer</strong> néven</li>
+</ol>
+
+<h2>3. Extension kitűzése (pin)</h2>
+
+<p>Hogy mindig lásd az ikont, tűzd ki a toolbarra:</p>
+
+<ol>
+  <li>Kattints a 🧩 <strong>puzzle ikonra</strong> a Chrome jobb felső sarkában</li>
+  <li>A listában keresd meg a <strong>Linear → Clockify Timer</strong> sort</li>
+  <li>Kattints mellette a <strong>pin ikonra</strong> (áthúzott pin → normál pin)</li>
+</ol>
+
+<img class="screenshot" src="screenshots/pin.png" alt="Puzzle ikon menüje, benne Linear → Clockify Timer pin gombbal">
+
+<p>Ezután az extension ikonja megjelenik a címsor jobb oldalán, onnan egy kattintással elérhető.</p>
+
+<h2>4. API kulcsok beszerzése</h2>
+
+<p>Az extension két API kulcsot kér a beállításokban.</p>
+
+<h3>Clockify API key</h3>
+
+<ol>
+  <li>Menj ide: <a href="https://app.clockify.me/manage-api-keys">https://app.clockify.me/manage-api-keys</a></li>
+  <li>Ha még nincs aktív kulcsod: kattints a <strong>Generate</strong> gombra</li>
+  <li>Másold ki a kulcsot (egyszer látszik, érdemes jelszókezelőbe menteni)</li>
+</ol>
+
+<h3>Linear API key</h3>
+
+<ol>
+  <li>Menj ide: <a href="https://linear.app/gghq/settings/account/security">https://linear.app/gghq/settings/account/security</a></li>
+  <li>Görgess a <strong>Personal API keys</strong> szekcióhoz</li>
+  <li><strong>New API key</strong> → adj neki egy nevet (pl. <code>linear-clockify-extension</code>)</li>
+  <li>Másold ki a kulcsot (ez is csak egyszer látszik!)</li>
+</ol>
+
+<h2>5. API kulcsok megadása az extensionben</h2>
+
+<ol>
+  <li>Kattints <strong>jobb gombbal</strong> az extension ikonjára → <strong>Options</strong><br>
+    <span style="color: var(--muted); font-size: 0.9em;">(vagy: <code>chrome://extensions/</code> → <strong>Linear → Clockify Timer</strong> kártya → <strong>Details</strong> → <strong>Extension options</strong>)</span>
+  </li>
+  <li>Illeszd be a <strong>Clockify API key</strong> és <strong>Linear API key</strong> mezőkbe a kulcsokat</li>
+  <li><strong>Mentés</strong></li>
+</ol>
+
+<h2>6. Használat</h2>
+
+<ol>
+  <li>Nyiss egy Linear issue-t vagy HelpScout conversationt</li>
+  <li>Kattints az extension ikonjára a toolbaron</li>
+  <li>A popup tetején megjelenik a <strong>▶ Start</strong> gomb → kattints rá → elindul a Clockify timer a megfelelő projekttel és leírással</li>
+  <li>Stop ugyanúgy a popupból</li>
+</ol>
+
+<h2>Frissítés új verzióra</h2>
+
+<p>Ha szólnak hogy jött új verzió:</p>
+
+<ol>
+  <li>Töltsd le a zipet újra (fenti ⬇ gomb — mindig a legfrissebb)</li>
+  <li>Csomagold ki <strong>ugyanabba a mappába</strong>, felülírva a régi fájlokat<br>
+    <span style="color: var(--muted); font-size: 0.9em;">(vagy: töröld a régi mappa tartalmát és csomagold oda az újat)</span>
+  </li>
+  <li>Nyisd meg: <code>chrome://extensions/</code> → <strong>Linear → Clockify Timer</strong> kártyán a 🔄 <strong>Reload</strong> gomb</li>
+  <li>Az új verzió azonnal aktív</li>
+</ol>
+
+<h2>Gyakori hibák</h2>
+
+<dl>
+  <dt>„This extension may have been corrupted" vagy „Load unpacked failed"</dt>
+  <dd>Valószínűleg nem a megfelelő mappát választottad ki. Azt a mappát kell kiválasztani, amelyikben <strong>közvetlenül ott van</strong> a <code>manifest.json</code>.</dd>
+
+  <dt>„Developer mode extensions" figyelmeztetés Chrome indításkor</dt>
+  <dd>Ez normál, mert nem a Chrome Web Store-ból telepítettük. Nyugodtan nyomd meg a <strong>Keep</strong> / <strong>Maradjon</strong> gombot.</dd>
+
+  <dt>Eltűnt az extension Chrome újraindítás után</dt>
+  <dd>A kicsomagolt mappát valaki/valami elmozdította vagy törölte. Csomagold ki újra egy stabil helyre és töltsd be újra (Load unpacked).</dd>
+
+  <dt>„Invalid API key" hiba</dt>
+  <dd>Ellenőrizd az Options oldalon, hogy a helyes kulcsot másoltad-e be, szóközök nélkül. Ha kétséges, generálj újat.</dd>
+
+  <dt>Nem jelenik meg az extension ikonja a toolbaron</dt>
+  <dd>Kattints a 🧩 puzzle ikonra (3. lépés), és tűzd ki onnan.</dd>
+</dl>
 
 <footer>
-  <a href="https://github.com/GuestGuru/linear-clockify">GitHub repo</a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/GuestGuru/linear-clockify/blob/main/docs/TELEPITES.md">Telepítés</a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/GuestGuru/linear-clockify/blob/main/README.md">README</a>
+  Linear → Clockify Timer · belső eszköz · GuestGuru
 </footer>
 
 </main>

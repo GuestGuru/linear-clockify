@@ -6,19 +6,9 @@ Chrome extension Clockify time-trackerhez, Linear + HelpScout integrációval. A
 
 Az extension még nincs fent a Chrome Web Store-on, ezért letöltött zip fájlból kell telepíteni.
 
-**→ Letöltés + részletes útmutató: [docs/TELEPITES.md](docs/TELEPITES.md)**
+**→ Letöltés + képernyőképes útmutató: https://guestguru.github.io/linear-clockify/**
 
-Rövid verzió:
-
-1. Töltsd le a zipet: https://guestguru.github.io/linear-clockify/ (vagy közvetlenül a [legfrissebb release](https://github.com/GuestGuru/linear-clockify/releases/latest))
-2. Csomagold ki egy állandó mappába (ne mozgasd utána!)
-3. `chrome://extensions/` → **Developer mode** ON → **Load unpacked** → válaszd a mappát
-4. Extension ikon → **Options** → Clockify és Linear API key megadása
-5. Nyiss egy Linear issue-t vagy HelpScout conversationt → kattints az extension ikonjára
-
-### Fejlesztőknek
-
-Ha a repót klónozod (nem zipet töltesz le): `chrome://extensions/` → Developer mode ON → Load unpacked → válaszd ki a repo gyökerét.
+Fejlesztőknek (klónozott repóval): `chrome://extensions/` → Developer mode ON → Load unpacked → válaszd ki a repo gyökerét.
 
 ## Funkciók
 
@@ -106,8 +96,7 @@ icons/              Extension ikonok
 build-zip.sh        Terjeszthető zip generálása
 scripts/release.sh  Verzió bump + git tag helper
 .github/workflows/  CI — tag-push triggerre release + zip upload
-docs/index.html     GitHub Pages landing (letöltő oldal)
-docs/TELEPITES.md   Végfelhasználói telepítési útmutató
+docs/index.html     GitHub Pages landing — letöltés + telepítési útmutató
 docs/QA-CHECKLIST.md Manual QA lista release előtt
 ```
 
