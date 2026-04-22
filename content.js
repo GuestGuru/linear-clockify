@@ -335,9 +335,11 @@ async function handleButtonClick(event) {
 
   try {
     const { activeTimer } = await chrome.storage.local.get('activeTimer');
+    console.log('[LC] click', { buttonId: button.id, issueKey: issue.issueKey, activeTimer });
 
     if (activeTimer && activeTimer.issueKey === issue.issueKey && !activeTimer.external) {
       const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
+      console.log('[LC] stopTimer ←', result);
       if (result.error) showError(result.error);
     } else if (activeTimer && !activeTimer.external) {
       const issueTitle = await getIssueTitle();
@@ -345,6 +347,7 @@ async function handleButtonClick(event) {
         action: 'stopAndStartTimer',
         data: { issueKey: issue.issueKey, issueTitle, teamKey: issue.teamKey },
       });
+      console.log('[LC] stopAndStartTimer ←', result);
       if (result.error) showError(result.error);
       if (result.warning) showWarning(result.warning);
     } else {
@@ -353,10 +356,12 @@ async function handleButtonClick(event) {
         action: 'startTimer',
         data: { issueKey: issue.issueKey, issueTitle, teamKey: issue.teamKey },
       });
+      console.log('[LC] startTimer ←', result);
       if (result.error) showError(result.error);
       if (result.warning) showWarning(result.warning);
     }
   } catch (err) {
+    console.error('[LC] click error', err);
     showError(err.message);
   } finally {
     button.disabled = false;
@@ -392,6 +397,7 @@ function showWarning(message) {
 // ─── Button State & Elapsed Timer ────────────────────────────────────────────
 
 let elapsedInterval = null;
+let lastStateLogKey = null;
 
 function applyButtonState(button, elapsed, info, state, activeTimer) {
   if (!button) return;
@@ -474,17 +480,38 @@ async function updateButtonState() {
     applyButtonState(button, elapsed, info, state, activeTimer);
   });
 
+  // Hide snap chip while the timer for *this* issue is running. The chip
+  // re-appears inside the elapsed-click start-editor instead.
+  const hideSnap = state === 'stop';
+  if (mainSnapChip) mainSnapChip.setForcedHidden(hideSnap);
+  if (cardSnapChip) cardSnapChip.setForcedHidden(hideSnap);
+
+  const stateKey = activeTimer
+    ? `${state}|${activeTimer.issueKey || ''}|${!!activeTimer.external}`
+    : state;
+  if (stateKey !== lastStateLogKey) {
+    lastStateLogKey = stateKey;
+    console.log('[LC] state →', state, activeTimer ? { issueKey: activeTimer.issueKey, external: !!activeTimer.external } : null);
+  }
+
   if (state === 'stop') {
     startElapsedCounter(activeTimer.startedAt);
   }
 
-  if (mainSnapChip) mainSnapChip.refresh();
-  if (cardSnapChip) cardSnapChip.refresh();
+  // Snap chip refresh moved to storage listener + watchdog — see bottom.
+  // Previously refreshed on every updateButtonState call, which fires
+  // frequently from the SPA MutationObserver and produced unnecessary
+  // Clockify API load.
 
   if (state !== 'stop') {
     if (mainStartEditor) mainStartEditor.hide();
     if (cardStartEditor) cardStartEditor.hide();
   }
+}
+
+function refreshSnapChips() {
+  if (mainSnapChip) mainSnapChip.refresh();
+  if (cardSnapChip) cardSnapChip.refresh();
 }
 
 function startElapsedCounter(startedAt) {
@@ -572,10 +599,15 @@ urlObserver.observe(document.body, { childList: true, subtree: true });
 
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.activeTimer || changes.settings) {
+    console.log('[LC] storage change', Object.keys(changes));
     updateButtonState();
+    refreshSnapChips();
   }
 });
 
 if (parseIssueFromUrl()) {
+  console.log('[LC] init', parseIssueFromUrl());
   waitForDomAndInit();
+  // Watchdog: keep the chip honest as the 30-min snap window rolls forward.
+  setInterval(refreshSnapChips, 60000);
 }

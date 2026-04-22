@@ -433,7 +433,13 @@
     chip.style.display = 'none';
     chip.setAttribute('aria-pressed', 'true');
 
+    let forcedHidden = false;
+
     function render({ snapTo, snapEnabled }) {
+      if (forcedHidden) {
+        chip.style.display = 'none';
+        return;
+      }
       if (!snapEnabled) {
         chip.style.display = 'inline-flex';
         chip.textContent = '↶ off';
@@ -456,6 +462,10 @@
     }
 
     async function refresh() {
+      if (forcedHidden) {
+        chip.style.display = 'none';
+        return;
+      }
       // Preserve previous visible state on error / undefined response.
       // Transient service-worker restarts can make chrome.runtime.sendMessage
       // resolve with undefined, and the !snapTo branch used to hide an
@@ -469,6 +479,17 @@
       }
     }
 
+    function setForcedHidden(b) {
+      const next = !!b;
+      if (next === forcedHidden) return;
+      forcedHidden = next;
+      if (forcedHidden) {
+        chip.style.display = 'none';
+      } else {
+        refresh();
+      }
+    }
+
     chip.addEventListener('click', async () => {
       const isOff = chip.classList.contains('lc-snap-chip-off');
       const next = isOff; // if currently off, next is true (enable); if currently active, next is false
@@ -476,7 +497,7 @@
       await refresh();
     });
 
-    return { chip, refresh, render };
+    return { chip, refresh, render, setForcedHidden };
   }
 
   // ─── Start-time editor ───────────────────────────────────────────────────
@@ -504,11 +525,18 @@
     input.autocomplete = 'off';
     input.maxLength = 5;
 
+    const snapBtn = document.createElement('button');
+    snapBtn.type = 'button';
+    snapBtn.className = 'lc-snap-chip lc-snap-chip-active lc-start-editor-snap';
+    snapBtn.style.display = 'none';
+    snapBtn.title = 'Kattintásra az előző entry végére állítja a kezdést';
+
     const status = document.createElement('span');
     status.className = 'lc-start-editor-status';
 
     container.appendChild(label);
     container.appendChild(input);
+    container.appendChild(snapBtn);
     container.appendChild(status);
 
     let currentStartISO = null;
@@ -518,12 +546,31 @@
       status.textContent = text || '';
     }
 
+    async function populateSnapButton() {
+      snapBtn.style.display = 'none';
+      snapBtn.dataset.snapIso = '';
+      try {
+        const info = await chrome.runtime.sendMessage({ action: 'getSnapInfo' });
+        if (info?.snapEnabled && info.snapTo) {
+          const sd = new Date(info.snapTo);
+          const hh = String(sd.getHours()).padStart(2, '0');
+          const mm = String(sd.getMinutes()).padStart(2, '0');
+          snapBtn.textContent = `↶ ${hh}:${mm}`;
+          snapBtn.dataset.snapIso = info.snapTo;
+          snapBtn.style.display = 'inline-flex';
+        }
+      } catch {
+        // keep hidden on error
+      }
+    }
+
     function show(iso) {
       currentStartISO = iso;
       const d = new Date(iso);
       input.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       setStatus('', '');
       container.style.display = 'flex';
+      populateSnapButton();
       setTimeout(() => {
         input.focus();
         input.select();
@@ -570,6 +617,14 @@
         setStatus('error', err.message);
       }
     }
+
+    snapBtn.addEventListener('click', () => {
+      const iso = snapBtn.dataset.snapIso;
+      if (!iso) return;
+      const sd = new Date(iso);
+      input.value = `${String(sd.getHours()).padStart(2, '0')}:${String(sd.getMinutes()).padStart(2, '0')}`;
+      save();
+    });
 
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {

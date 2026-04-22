@@ -262,6 +262,13 @@ async function updateHsButtonState() {
   }
   buttons.forEach(({ button, elapsed, info }) => { applyHsButtonState(button, elapsed, info, state, activeTimer); });
 
+  // Snap chip doesn't belong next to a running local timer — it only makes
+  // sense for Start or inside the elapsed-click start-editor. Hide when the
+  // active timer is the one for *this* conv (state === 'stop').
+  const hideSnap = state === 'stop';
+  if (hsMainSnapChip) hsMainSnapChip.setForcedHidden(hideSnap);
+  if (hsCardSnapChip) hsCardSnapChip.setForcedHidden(hideSnap);
+
   const stateKey = activeTimer
     ? `${state}|${activeTimer.source}|${activeTimer.ticketNumber || activeTimer.issueKey || ''}|${!!activeTimer.external}`
     : state;
