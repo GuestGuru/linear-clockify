@@ -29,6 +29,18 @@ Minden `linear.app/gghq/issue/*` oldalon megjelenik:
 | Ezen az issue-n fut | ⏹ Stop + eltelt idő | Piros |
 | Másik issue-n fut | ⏹ Stop & ▶ Start | Sárga |
 
+### HelpScout timer
+
+Minden `secure.helpscout.net/conversation/*` oldalon és a jobb oldali panelen megjelenik egy Clockify card:
+
+| Állapot | Gombok |
+|---|---|
+| Nincs futó timer | `▶ Start` |
+| Ezen a ticketen fut | `⏹ Stop` + `✓ Stop & Done` |
+| Másik ticketen fut | `⏹ Stop` + `✓ Stop & Done` |
+
+A **Stop & Done** leállítja a futó Clockify timert, és a kapcsolódó Linear issue-t `Done` state-re állítja. Ha Linear-ben még nincs config vagy külső timer fut (pl. másik eszközről), a Done gomb nem jelenik meg.
+
 ### Manuális időrögzítés
 
 A Linear issue jobb paneljén (desktop) megjelenik egy Clockify card a projektválasztó alatt. Tartalma:

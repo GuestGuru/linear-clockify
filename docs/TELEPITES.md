@@ -134,3 +134,13 @@ Amikor új zip fájlt kapsz:
 - [ ] Egy meglévő issue-t kézzel zárj le Linear-ben (state = Done)
 - [ ] Kattints újra Start-ra a HS conv-n
 - [ ] Linear-ben: az issue marad Done-ban (**nem** kerül vissza In Progress-be) — manuálisan kell reopen-elned
+
+### Stop & Done gomb
+- [ ] HS timer start A ticketen → navigálj B ticketre → `⏹ Stop` → timer leáll, A Linear issue marad `In Progress`-ben
+- [ ] HS timer start A ticketen → navigálj B ticketre → `✓ Stop & Done` → timer leáll, A Linear issue `Done` state-re vált
+- [ ] HS timer start A ticketen (ugyanazon a ticketen maradsz) → `✓ Stop & Done` → timer leáll, A Linear issue `Done`
+- [ ] Extension popup: futó timer → `⏹ Stop` → leáll, issue változatlan
+- [ ] Extension popup: futó timer → `✓ Stop & Done` → leáll, Linear issue Done
+- [ ] Extension popup: külső (másik eszközön indított) timer → csak `⏹ Stop` látszik, `Stop & Done` nincs
+- [ ] Ha Linear config hiányzik, HS-ben nincs timer gomb, popup-ban csak Stop (nem Done)
+- [ ] Első Stop & Done lassabb (GraphQL lookup); második ugyanazon team-en gyors (cache)
