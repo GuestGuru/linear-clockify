@@ -21,28 +21,6 @@
       overflow-y: auto;
       min-height: 0;
     }
-    .header {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #888;
-      margin-bottom: 12px;
-    }
-    .timer-info { margin-bottom: 12px; }
-    .issue-key {
-      font-weight: 600;
-      color: #a78bfa;
-      font-size: 14px;
-    }
-    .issue-title { margin-top: 4px; color: #ccc; }
-    .project-name { margin-top: 4px; font-size: 12px; color: #888; }
-    .elapsed {
-      font-family: 'SF Mono', 'Consolas', monospace;
-      font-size: 24px;
-      font-weight: 600;
-      color: #ef4444;
-      margin: 12px 0;
-    }
     .stop-btn {
       width: 100%;
       padding: 8px 16px;
@@ -71,25 +49,7 @@
     .done-btn:hover { opacity: 0.9; }
     .done-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .no-timer { color: #888; text-align: center; padding: 20px 0; }
-    .external-badge {
-      display: inline-block;
-      font-size: 10px;
-      background: #333;
-      color: #888;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-left: 6px;
-    }
     .error { color: #ef4444; margin-top: 8px; font-size: 12px; display: none; }
-    .settings-link {
-      display: block;
-      text-align: center;
-      margin-top: 12px;
-      color: #6366f1;
-      text-decoration: none;
-      font-size: 12px;
-    }
-    .settings-link:hover { text-decoration: underline; }
 
     .section-header {
       font-size: 11px;
@@ -172,6 +132,7 @@
       color: #ef4444;
       background: transparent;
       border: 1px dashed #3a3a55;
+      font-variant-numeric: tabular-nums;
     }
     .recent-dash { color: #666; }
     .recent-duration {
@@ -220,6 +181,19 @@
       font-size: 10px;
       width: auto;
       padding: 0 6px;
+    }
+    .recent-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .recent-actions .stop-btn,
+    .recent-actions .done-btn {
+      flex: 1;
+      width: auto;
+      padding: 6px 10px;
+      font-size: 12px;
+      margin-top: 0;
     }
 
     .spinner {

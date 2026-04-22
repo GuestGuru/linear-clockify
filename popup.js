@@ -58,7 +58,7 @@ function isoFromEntryDate(originalISO, parsedTime) {
   ).toISOString();
 }
 
-function buildRecentRow(entry) {
+function buildRecentRow(entry, activeTimer, settings) {
   const row = document.createElement('div');
   row.className = 'recent-row';
   const isRunning = !entry.timeInterval?.end;
@@ -124,7 +124,7 @@ function buildRecentRow(entry) {
   endInput.maxLength = 5;
   let endDate = null;
   if (isRunning) {
-    endInput.value = 'fut';
+    endInput.value = formatRunningElapsed(entry.timeInterval.start);
     endInput.disabled = true;
     endInput.classList.add('running-end');
   } else {
@@ -136,8 +136,10 @@ function buildRecentRow(entry) {
 
   const duration = document.createElement('span');
   duration.className = 'recent-duration';
-  const durMs = (endDate ? endDate.getTime() : Date.now()) - startDate.getTime();
-  duration.textContent = formatDuration(durMs);
+  if (!isRunning) {
+    const durMs = endDate.getTime() - startDate.getTime();
+    duration.textContent = formatDuration(durMs);
+  }
   bottom.appendChild(duration);
 
   const status = document.createElement('span');
@@ -263,61 +265,76 @@ function buildRecentRow(entry) {
   startInput.addEventListener('blur', saveOnChange);
   if (!isRunning) endInput.addEventListener('blur', saveOnChange);
 
+  if (isRunning) {
+    const actions = buildRunningActions(activeTimer, settings);
+    if (actions) row.appendChild(actions);
+    startRunningTicker(endInput, entry.timeInterval.start);
+  }
+
   return row;
 }
 
-function renderActiveTimer(activeTimer, settings) {
-  const header = sectionHeader('Aktív timer');
-  content.appendChild(header);
-
-  const timerInfo = document.createElement('div');
-  timerInfo.className = 'timer-info';
-
-  const issueKeyEl = document.createElement('div');
-  issueKeyEl.className = 'issue-key';
-  issueKeyEl.textContent = activeTimer.issueKey || 'Ismeretlen';
-  if (activeTimer.external) {
-    const badge = document.createElement('span');
-    badge.className = 'external-badge';
-    badge.textContent = 'külső';
-    issueKeyEl.appendChild(badge);
+function formatRunningElapsed(startedAtISO) {
+  const diff = Date.now() - new Date(startedAtISO).getTime();
+  const totalMin = Math.floor(diff / 60000);
+  if (totalMin < 60) {
+    const s = Math.floor((diff % 60000) / 1000);
+    return `${String(totalMin).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
-  timerInfo.appendChild(issueKeyEl);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 
-  const titleEl = document.createElement('div');
-  titleEl.className = 'issue-title';
-  titleEl.textContent = activeTimer.issueTitle;
-  timerInfo.appendChild(titleEl);
+function startRunningTicker(endInput, startedAtISO) {
+  if (elapsedInterval) clearInterval(elapsedInterval);
+  const tick = () => { endInput.value = formatRunningElapsed(startedAtISO); };
+  tick();
+  elapsedInterval = setInterval(tick, 1000);
+}
 
-  if (activeTimer.projectName) {
-    const projectEl = document.createElement('div');
-    projectEl.className = 'project-name';
-    projectEl.textContent = `📁 ${activeTimer.projectName}`;
-    timerInfo.appendChild(projectEl);
-  }
-  content.appendChild(timerInfo);
+function buildRunningActions(activeTimer, settings) {
+  if (!activeTimer || activeTimer.external) return null;
 
-  const elapsedEl = document.createElement('div');
-  elapsedEl.className = 'elapsed';
-  elapsedEl.id = 'popup-elapsed';
-  elapsedEl.textContent = '00:00:00';
-  content.appendChild(elapsedEl);
-  startElapsed(activeTimer.startedAt);
+  const linearConfigComplete = !!(
+    settings?.linearApiKey && settings?.linearDefaultTeamId &&
+    settings?.linearViewerId && settings?.linearInProgressStateId
+  );
 
-  if (!activeTimer.external) {
-    const linearConfigComplete = !!(
-      settings?.linearApiKey && settings?.linearDefaultTeamId &&
-      settings?.linearViewerId && settings?.linearInProgressStateId
-    );
-    let doneBtn = null;
+  const actions = document.createElement('div');
+  actions.className = 'recent-actions';
 
-    const stopBtn = document.createElement('button');
-    stopBtn.className = 'stop-btn';
-    stopBtn.textContent = '⏹ Stop';
-    stopBtn.addEventListener('click', async () => {
+  let doneBtn = null;
+
+  const stopBtn = document.createElement('button');
+  stopBtn.className = 'stop-btn';
+  stopBtn.textContent = '⏹ Stop';
+  stopBtn.addEventListener('click', async () => {
+    stopBtn.disabled = true;
+    if (doneBtn) doneBtn.disabled = true;
+    const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
+    if (result.error) {
+      const errEl = document.createElement('div');
+      errEl.className = 'error';
+      errEl.style.display = 'block';
+      errEl.textContent = result.error;
+      content.appendChild(errEl);
+      stopBtn.disabled = false;
+      if (doneBtn) doneBtn.disabled = false;
+    } else {
+      render();
+    }
+  });
+  actions.appendChild(stopBtn);
+
+  if (activeTimer.issueKey && linearConfigComplete) {
+    doneBtn = document.createElement('button');
+    doneBtn.className = 'done-btn';
+    doneBtn.textContent = '✓ Stop & Done';
+    doneBtn.addEventListener('click', async () => {
       stopBtn.disabled = true;
-      if (doneBtn) doneBtn.disabled = true;
-      const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
+      doneBtn.disabled = true;
+      const result = await chrome.runtime.sendMessage({ action: 'stopAndDoneTimer' });
       if (result.error) {
         const errEl = document.createElement('div');
         errEl.className = 'error';
@@ -325,47 +342,26 @@ function renderActiveTimer(activeTimer, settings) {
         errEl.textContent = result.error;
         content.appendChild(errEl);
         stopBtn.disabled = false;
-        if (doneBtn) doneBtn.disabled = false;
-      } else {
-        render();
+        doneBtn.disabled = false;
+        return;
       }
+      if (result.warning) {
+        const warnEl = document.createElement('div');
+        warnEl.className = 'error';
+        warnEl.style.display = 'block';
+        warnEl.style.color = '#eab308';
+        warnEl.textContent = `⚠️ ${result.warning}`;
+        content.appendChild(warnEl);
+      }
+      render();
     });
-    content.appendChild(stopBtn);
-
-    if (activeTimer.issueKey && linearConfigComplete) {
-      doneBtn = document.createElement('button');
-      doneBtn.className = 'done-btn';
-      doneBtn.textContent = '✓ Stop & Done';
-      doneBtn.addEventListener('click', async () => {
-        stopBtn.disabled = true;
-        doneBtn.disabled = true;
-        const result = await chrome.runtime.sendMessage({ action: 'stopAndDoneTimer' });
-        if (result.error) {
-          const errEl = document.createElement('div');
-          errEl.className = 'error';
-          errEl.style.display = 'block';
-          errEl.textContent = result.error;
-          content.appendChild(errEl);
-          stopBtn.disabled = false;
-          doneBtn.disabled = false;
-          return;
-        }
-        if (result.warning) {
-          const warnEl = document.createElement('div');
-          warnEl.className = 'error';
-          warnEl.style.display = 'block';
-          warnEl.style.color = '#eab308';
-          warnEl.textContent = `⚠️ ${result.warning}`;
-          content.appendChild(warnEl);
-        }
-        render();
-      });
-      content.appendChild(doneBtn);
-    }
+    actions.appendChild(doneBtn);
   }
+
+  return actions;
 }
 
-async function renderRecent() {
+async function renderRecent(activeTimer, settings) {
   content.appendChild(sectionHeader('Legutóbbi bejegyzések'));
   const list = document.createElement('div');
   list.className = 'recent-list';
@@ -379,10 +375,16 @@ async function renderRecent() {
   loading.appendChild(document.createTextNode('Betöltés…'));
   list.appendChild(loading);
 
+  const rawCount = settings?.recentEntriesCount;
+  const parsedCount = Number.parseInt(rawCount, 10);
+  const pageSize = Number.isFinite(parsedCount)
+    ? Math.min(20, Math.max(1, parsedCount))
+    : 3;
+
   try {
     const result = await chrome.runtime.sendMessage({
       action: 'getRecentEntries',
-      data: { pageSize: 3 },
+      data: { pageSize },
     });
     loading.remove();
     const entries = result?.entries || [];
@@ -394,7 +396,7 @@ async function renderRecent() {
       return;
     }
     for (const entry of entries) {
-      list.appendChild(buildRecentRow(entry));
+      list.appendChild(buildRecentRow(entry, activeTimer, settings));
     }
   } catch (err) {
     loading.remove();
@@ -423,28 +425,7 @@ async function render() {
     return;
   }
 
-  if (activeTimer) {
-    renderActiveTimer(activeTimer, settings);
-  }
-
-  await renderRecent();
-}
-
-function startElapsed(startedAt) {
-  if (elapsedInterval) clearInterval(elapsedInterval);
-  const el = document.getElementById('popup-elapsed');
-  if (!el) return;
-
-  function update() {
-    const diff = Date.now() - new Date(startedAt).getTime();
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    el.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
-
-  update();
-  elapsedInterval = setInterval(update, 1000);
+  await renderRecent(activeTimer, settings);
 }
 
 chrome.storage.onChanged.addListener((changes) => {

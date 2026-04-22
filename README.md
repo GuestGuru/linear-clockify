@@ -56,7 +56,7 @@ Mobilon a lebegő timer container mellett van egy **✎** gomb, ami kinyitja ugy
 
 ### Toolbar popup
 
-Az extension ikon kattintásra mutatja a futó timer részleteit (issue, projekt, eltelt idő) és egy Stop gombot. A legutóbbi 3 bejegyzésnél a Linear link mellett egy `HS` link is megjelenik, ha az entry HelpScout ticketből indult — közvetlenül a conversation-re visz.
+Az extension ikon kattintásra a **Legutóbbi bejegyzések** listáját mutatja (alapból 3, Options-ben 1–20 közé állítható). A Linear link mellett egy `HS` link is megjelenik, ha az entry HelpScout ticketből indult — közvetlenül a conversation-re visz. A futó entry piros kerettel kiemelve: a végidő mezőben folyamatosan mutatja az eltelt időt (`MM:SS` 60 perc alatt, `HH:MM` felett), alatta pedig `⏹ Stop` + `✓ Stop & Done` gombok.
 
 ### Automatikus Clockify mapping
 
@@ -91,6 +91,7 @@ Az extension Options oldalán (`jobb klikk az ikonon → Options`):
 - **Workspace ID** — alapértelmezett: `5ef305cdb6b6d1294b8a04c0`
 - **Team → Projekt mapping** — szerkeszthető tábla
 - **Auto-stop** — timer leállítása ha az összes Linear tab bezárul
+- **Legutóbbi bejegyzések száma** — hány Clockify entry jelenjen meg a popupban (1–20, alapból 3)
 
 ## Technikai részletek
 
