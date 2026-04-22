@@ -561,6 +561,20 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 
+// Popup → content script: return the current HS conversation context.
+// Emails + hsCustomerId need DOM access, so the popup asks the content
+// script for the full context rather than parsing the URL on its own.
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.action !== 'getPageContext') return false;
+  const ctx = getConversationContext();
+  if (!ctx) {
+    sendResponse({ source: null });
+    return false;
+  }
+  sendResponse({ source: 'hs', ...ctx });
+  return false;
+});
+
 if (parseHsUrl(window.location.pathname)) {
   ensureHsUI();
   startHsKeepAlive();

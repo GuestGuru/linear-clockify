@@ -607,6 +607,28 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 
+// Popup → content script: return the current Linear page context so the
+// popup can offer Start / Start&snap / manual entry without duplicating
+// the URL + title parsing logic.
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.action !== 'getPageContext') return false;
+  (async () => {
+    const issue = parseIssueFromUrl();
+    if (!issue) {
+      sendResponse({ source: null });
+      return;
+    }
+    const issueTitle = await getIssueTitle();
+    sendResponse({
+      source: 'linear',
+      issueKey: issue.issueKey,
+      teamKey: issue.teamKey,
+      issueTitle,
+    });
+  })();
+  return true;
+});
+
 if (parseIssueFromUrl()) {
   console.log('[LC] init', parseIssueFromUrl());
   waitForDomAndInit();
