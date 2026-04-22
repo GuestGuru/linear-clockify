@@ -1,6 +1,17 @@
 // Linear → Clockify Timer — Options
 
 const DEFAULT_WORKSPACE_ID = '5ef305cdb6b6d1294b8a04c0';
+const DEFAULT_RECENT_ENTRIES_COUNT = 3;
+const MIN_RECENT_ENTRIES_COUNT = 1;
+const MAX_RECENT_ENTRIES_COUNT = 20;
+
+function clampRecentEntriesCount(value) {
+  const n = Number.parseInt(value, 10);
+  if (!Number.isFinite(n)) return DEFAULT_RECENT_ENTRIES_COUNT;
+  if (n < MIN_RECENT_ENTRIES_COUNT) return MIN_RECENT_ENTRIES_COUNT;
+  if (n > MAX_RECENT_ENTRIES_COUNT) return MAX_RECENT_ENTRIES_COUNT;
+  return n;
+}
 
 const DEFAULT_SETTINGS = {
   apiKey: '',
@@ -10,6 +21,7 @@ const DEFAULT_SETTINGS = {
   linearInProgressStateId: '',
   workspaceId: DEFAULT_WORKSPACE_ID,
   autoStop: false,
+  recentEntriesCount: DEFAULT_RECENT_ENTRIES_COUNT,
   teamMapping: {
     GG: 'Cég működése',
     MAN: 'Management',
@@ -36,6 +48,9 @@ async function render() {
   document.getElementById('linearApiKey').value = settings.linearApiKey || '';
   document.getElementById('workspaceId').value = settings.workspaceId || DEFAULT_SETTINGS.workspaceId;
   document.getElementById('autoStop').checked = settings.autoStop || false;
+  document.getElementById('recentEntriesCount').value = clampRecentEntriesCount(
+    settings.recentEntriesCount ?? DEFAULT_RECENT_ENTRIES_COUNT
+  );
 
   const sel = document.getElementById('linearDefaultTeam');
   if (settings.linearDefaultTeamId) {
@@ -135,6 +150,7 @@ document.getElementById('save').addEventListener('click', async () => {
     linearInProgressStateId,
     workspaceId: document.getElementById('workspaceId').value.trim() || DEFAULT_SETTINGS.workspaceId,
     autoStop: document.getElementById('autoStop').checked,
+    recentEntriesCount: clampRecentEntriesCount(document.getElementById('recentEntriesCount').value),
     teamMapping: collectMapping(),
   };
 

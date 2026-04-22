@@ -24,7 +24,7 @@
     }
     .section h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #111; }
     label { display: block; font-size: 12px; font-weight: 500; color: #555; margin-bottom: 4px; }
-    input[type="text"], input[type="password"] {
+    input[type="text"], input[type="password"], input[type="number"] {
       width: 100%;
       padding: 8px 12px;
       border: 1px solid #d1d5db;
@@ -33,7 +33,10 @@
       font-family: inherit;
       margin-bottom: 12px;
     }
-    input[type="text"]:focus, input[type="password"]:focus, select:focus {
+    input[type="number"] {
+      width: 80px;
+    }
+    input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus {
       outline: none;
       border-color: #6366f1;
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
@@ -118,6 +121,10 @@
       <input type="checkbox" id="autoStop">
       <label for="autoStop">Timer automatikus leállítása ha bezárom a Linear tabot</label>
     </div>
+
+    <label for="recentEntriesCount">Legutóbbi bejegyzések száma a popupban</label>
+    <input type="number" id="recentEntriesCount" min="1" max="20" step="1" value="3">
+    <div class="hint">Mennyi legutóbbi Clockify bejegyzés jelenjen meg az ikonra kattintva (1–20)</div>
   </div>
 
   <div class="section">
