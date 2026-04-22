@@ -210,10 +210,11 @@ function showHsWarning(message) {
   setTimeout(() => { info.style.display = 'none'; }, 5000);
 }
 
-function applyHsButtonState(button, elapsed, info, state, activeTimer) {
+function applyHsButtonState(button, doneButton, elapsed, info, state, activeTimer, linearConfigComplete) {
   if (!button) return;
   if (state === 'hidden') {
     button.style.display = 'none';
+    if (doneButton) doneButton.style.display = 'none';
     if (info) {
       info.style.display = 'inline';
       info.textContent = '';
@@ -222,19 +223,31 @@ function applyHsButtonState(button, elapsed, info, state, activeTimer) {
     return;
   }
   button.style.display = '';
+  const showDone = !!linearConfigComplete;
   if (state === 'start') {
     button.className = 'lc-btn lc-btn-start';
     button.textContent = '▶ Start';
+    if (doneButton) doneButton.style.display = 'none';
     if (elapsed) elapsed.style.display = 'none';
     if (info) info.style.display = 'none';
   } else if (state === 'stop') {
     button.className = 'lc-btn lc-btn-stop';
     button.textContent = '⏹ Stop';
+    if (doneButton) {
+      doneButton.style.display = showDone ? '' : 'none';
+      doneButton.className = 'lc-btn lc-btn-done';
+      doneButton.textContent = '✓ Stop & Done';
+    }
     if (elapsed) elapsed.style.display = 'inline';
     if (info) info.style.display = 'none';
   } else if (state === 'switch') {
-    button.className = 'lc-btn lc-btn-switch';
-    button.textContent = '⏹ Stop & ▶ Start';
+    button.className = 'lc-btn lc-btn-stop';
+    button.textContent = '⏹ Stop';
+    if (doneButton) {
+      doneButton.style.display = showDone ? '' : 'none';
+      doneButton.className = 'lc-btn lc-btn-done';
+      doneButton.textContent = '✓ Stop & Done';
+    }
     if (elapsed) elapsed.style.display = 'none';
     if (info) {
       info.style.display = 'inline';
@@ -253,11 +266,13 @@ async function updateHsButtonState() {
   const buttons = [
     {
       button: document.getElementById('lc-hs-timer-button'),
+      doneButton: document.getElementById('lc-hs-timer-done-button'),
       elapsed: document.getElementById('lc-hs-elapsed'),
       info: document.getElementById('lc-hs-info'),
     },
     {
       button: document.getElementById('lc-hs-card-timer-button'),
+      doneButton: document.getElementById('lc-hs-card-timer-done-button'),
       elapsed: document.getElementById('lc-hs-card-elapsed'),
       info: document.getElementById('lc-hs-card-info'),
     },
@@ -265,8 +280,14 @@ async function updateHsButtonState() {
   if (buttons.length === 0) return;
 
   const { settings } = await chrome.storage.local.get('settings');
+  const linearConfigComplete = !!(
+    settings?.linearApiKey && settings?.linearDefaultTeamId &&
+    settings?.linearViewerId && settings?.linearInProgressStateId
+  );
   if (!settings?.apiKey) {
-    buttons.forEach(({ button, elapsed, info }) => { applyHsButtonState(button, elapsed, info, 'hidden'); });
+    buttons.forEach(({ button, doneButton, elapsed, info }) => {
+      applyHsButtonState(button, doneButton, elapsed, info, 'hidden', null, false);
+    });
     return;
   }
 
@@ -280,7 +301,9 @@ async function updateHsButtonState() {
   } else {
     state = 'switch';
   }
-  buttons.forEach(({ button, elapsed, info }) => { applyHsButtonState(button, elapsed, info, state, activeTimer); });
+  buttons.forEach(({ button, doneButton, elapsed, info }) => {
+    applyHsButtonState(button, doneButton, elapsed, info, state, activeTimer, linearConfigComplete);
+  });
 
   // Snap chip doesn't belong next to a running local timer — it only makes
   // sense for Start or inside the elapsed-click start-editor. Hide when the
