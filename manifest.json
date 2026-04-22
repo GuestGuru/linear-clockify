@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Linear → Clockify Timer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Clockify time tracker button on Linear issue pages. Auto-maps Linear teams to Clockify projects.",
   "permissions": ["storage", "alarms", "tabs"],
   "host_permissions": [
