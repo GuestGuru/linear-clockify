@@ -48,6 +48,53 @@ function formatTime(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
+const HU_DAYS = ['vasárnap', 'hétfő', 'kedd', 'szerda', 'csütörtök', 'péntek', 'szombat'];
+const HU_MONTHS = [
+  'január', 'február', 'március', 'április', 'május', 'június',
+  'július', 'augusztus', 'szeptember', 'október', 'november', 'december',
+];
+
+function dayKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function mondayOf(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dow = d.getDay(); // 0=Sun ... 6=Sat
+  const offset = dow === 0 ? 6 : dow - 1;
+  d.setDate(d.getDate() - offset);
+  return d.getTime();
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function formatDayLabel(date) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const entryDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((today - entryDay) / 86400000);
+
+  if (diffDays === 0) return null;
+  if (diffDays === 1) return 'Tegnap';
+
+  if (diffDays > 0 && mondayOf(today) === mondayOf(entryDay)) {
+    return capitalize(HU_DAYS[date.getDay()]);
+  }
+
+  return `${capitalize(HU_MONTHS[date.getMonth()])} ${date.getDate()}, ${HU_DAYS[date.getDay()]}`;
+}
+
+function buildDayDivider(label) {
+  const el = document.createElement('div');
+  el.className = 'recent-day-divider';
+  const span = document.createElement('span');
+  span.textContent = label;
+  el.appendChild(span);
+  return el;
+}
+
 function formatDuration(ms) {
   const total = Math.floor(ms / 60000);
   const h = Math.floor(total / 60);
@@ -482,7 +529,16 @@ async function renderRecent(activeTimer, settings, gen, hasLocalTimer) {
         empty.textContent = page === 1 ? 'Még nincs bejegyzés' : 'Nincs több bejegyzés';
         list.appendChild(empty);
       } else {
+        const todayKey = dayKey(new Date());
+        let lastKey = null;
         for (const entry of entries) {
+          const entryStart = new Date(entry.timeInterval.start);
+          const entryKey = dayKey(entryStart);
+          if (entryKey !== lastKey && entryKey !== todayKey) {
+            const label = formatDayLabel(entryStart);
+            if (label) list.appendChild(buildDayDivider(label));
+          }
+          lastKey = entryKey;
           list.appendChild(buildRecentRow(entry, activeTimer, settings, hasLocalTimer));
         }
       }
