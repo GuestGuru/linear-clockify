@@ -341,7 +341,7 @@ async function createManualEntry(issueKey, issueTitle, teamKey, startISO, endISO
 }
 
 async function createHsManualEntry(ctx) {
-  const { ticketNumber, subject, customer, startISO, endISO, dayStartISO, dayEndISO } = ctx;
+  const { ticketNumber, subject, customer, convId, startISO, endISO, dayStartISO, dayEndISO } = ctx;
   const settings = await getSettings();
 
   const linear = await resolveHsLinearIssue(ctx);
@@ -368,7 +368,7 @@ async function createHsManualEntry(ctx) {
   const body = {
     start: startISO,
     end: endISO,
-    description: buildHsDescription({ issueKey, ticketNumber, subject, customer }),
+    description: buildHsDescription({ issueKey, ticketNumber, subject, customer, hsConvIdLong: convId }),
   };
   if (projectId) body.projectId = projectId;
 
@@ -424,7 +424,7 @@ async function startTimer(issueKey, issueTitle, teamKey) {
 }
 
 async function startHsTimer(ctx) {
-  const { ticketNumber, subject, customer } = ctx;
+  const { ticketNumber, subject, customer, convId } = ctx;
   const settings = await getSettings();
 
   const linear = await resolveHsLinearIssue(ctx);
@@ -441,7 +441,7 @@ async function startHsTimer(ctx) {
 
   const body = {
     start: await resolveStartTime(),
-    description: buildHsDescription({ issueKey, ticketNumber, subject, customer }),
+    description: buildHsDescription({ issueKey, ticketNumber, subject, customer, hsConvIdLong: convId }),
   };
   if (projectId) body.projectId = projectId;
 
@@ -464,6 +464,104 @@ async function startHsTimer(ctx) {
   updateBadge(activeTimer);
 
   return { success: true, warning };
+}
+
+async function getRecentEntries(pageSize = 3) {
+  const settings = await getSettings();
+  const userId = await getUserId();
+  const entries = await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/user/${userId}/time-entries?page-size=${pageSize}`
+  );
+  return entries || [];
+}
+
+async function updateEntryTimes({ entryId, newStartISO, newEndISO }) {
+  if (!entryId) return { error: 'Hiányzó entry azonosító' };
+
+  const settings = await getSettings();
+
+  const newStartMs = new Date(newStartISO).getTime();
+  if (!Number.isFinite(newStartMs)) return { error: 'Érvénytelen kezdés' };
+  if (newStartMs > Date.now() + 60_000) return { error: 'A kezdés nem lehet a jövőben' };
+
+  let newEndMs = null;
+  if (newEndISO) {
+    newEndMs = new Date(newEndISO).getTime();
+    if (!Number.isFinite(newEndMs)) return { error: 'Érvénytelen befejezés' };
+    if (newEndMs <= newStartMs) return { error: 'A vége nagyobb kell legyen a kezdésnél' };
+  }
+
+  // Effective end for overlap window: real end or now (running timer).
+  const effectiveEndMs = newEndMs || Date.now();
+  const startDate = new Date(newStartMs);
+  const endDate = new Date(effectiveEndMs);
+  const dayStart = new Date(Date.UTC(
+    startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate() - 1
+  )).toISOString();
+  const dayEnd = new Date(Date.UTC(
+    endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate() + 2
+  )).toISOString();
+  const effectiveEndISO = newEndISO || new Date(effectiveEndMs).toISOString();
+
+  const conflict = await findOverlap(newStartISO, effectiveEndISO, dayStart, dayEnd, entryId);
+  if (conflict) {
+    const cs = new Date(conflict.timeInterval.start);
+    const ce = conflict.timeInterval.end ? new Date(conflict.timeInterval.end) : null;
+    const timeStr = ce ? `${formatHM(cs)}–${formatHM(ce)}` : `${formatHM(cs)}–(fut)`;
+    const desc = conflict.description || '(leírás nélkül)';
+    return { error: 'OVERLAP', conflictWith: `${desc} @ ${timeStr}` };
+  }
+
+  const current = await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries/${entryId}`
+  );
+
+  const putBody = {
+    start: newStartISO,
+    billable: current.billable,
+    description: current.description,
+    projectId: current.projectId || undefined,
+    taskId: current.taskId || undefined,
+    tagIds: current.tagIds || undefined,
+  };
+  if (newEndISO) {
+    putBody.end = newEndISO;
+  } else if (current.timeInterval?.end) {
+    putBody.end = current.timeInterval.end;
+  }
+
+  await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries/${entryId}`,
+    { method: 'PUT', body: JSON.stringify(putBody) }
+  );
+
+  // Keep activeTimer in sync if we just edited the running timer.
+  const { activeTimer } = await chrome.storage.local.get('activeTimer');
+  if (activeTimer?.timeEntryId === entryId) {
+    const updated = { ...activeTimer, startedAt: newStartISO };
+    await chrome.storage.local.set({ activeTimer: updated });
+    updateBadge(updated);
+  }
+
+  return { success: true };
+}
+
+async function deleteEntry(entryId) {
+  if (!entryId) return { error: 'Hiányzó entry azonosító' };
+  const settings = await getSettings();
+
+  await clockifyFetch(
+    `/workspaces/${settings.workspaceId}/time-entries/${entryId}`,
+    { method: 'DELETE' }
+  );
+
+  const { activeTimer } = await chrome.storage.local.get('activeTimer');
+  if (activeTimer?.timeEntryId === entryId) {
+    await chrome.storage.local.remove('activeTimer');
+    clearBadge();
+  }
+
+  return { success: true };
 }
 
 async function updateTimerStart(newStartISO) {
@@ -698,6 +796,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         case 'updateTimerStart': {
           return await updateTimerStart(message.data.newStartISO);
+        }
+        case 'getRecentEntries': {
+          const entries = await getRecentEntries(message.data?.pageSize || 3);
+          return { entries };
+        }
+        case 'updateEntryTimes': {
+          return await updateEntryTimes(message.data);
+        }
+        case 'deleteEntry': {
+          return await deleteEntry(message.data?.entryId);
         }
         case 'stopAndStartTimer': {
           await stopTimer();

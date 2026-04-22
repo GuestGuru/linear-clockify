@@ -120,6 +120,37 @@ test('buildHsDescription with Linear identifier uses [LIN-xxx] prefix', () => {
   assert.strictEqual(d, '[LIN-1234] Re: Népszínház 26. lemondás — Tímea Kovács');
 });
 
+test('buildHsDescription with hsConvIdLong appends [HS: LONGID] suffix', () => {
+  const d = buildHsDescription({
+    issueKey: 'LIN-1234',
+    subject: 'Re: Népszínház 26. lemondás',
+    customer: 'Tímea Kovács',
+    hsConvIdLong: '3259965890',
+  });
+  assert.strictEqual(d, '[LIN-1234] Re: Népszínház 26. lemondás — Tímea Kovács [HS: 3259965890]');
+});
+
+test('buildHsDescription with hsConvIdLong but no customer still appends suffix', () => {
+  const d = buildHsDescription({
+    issueKey: 'LIN-1234',
+    subject: 'Test subject',
+    customer: '',
+    hsConvIdLong: '3259965890',
+  });
+  assert.strictEqual(d, '[LIN-1234] Test subject [HS: 3259965890]');
+});
+
+test('buildHsDescription HS-fallback ignores hsConvIdLong (prefix already carries HS identity)', () => {
+  const d = buildHsDescription({
+    issueKey: null,
+    ticketNumber: '43152',
+    subject: 'Foo',
+    customer: 'Bar',
+    hsConvIdLong: '3259965890',
+  });
+  assert.strictEqual(d, '[HS: #43152] Foo - Bar');
+});
+
 test('buildHsDescription without customer uses no trailing em-dash', () => {
   const d = buildHsDescription({
     issueKey: 'LIN-1234',
@@ -169,6 +200,7 @@ test('detectTimerSource: Linear issue key', () => {
     issueKey: 'IT-123',
     teamKey: 'IT',
     issueTitle: 'Post booking automsg',
+    hsConvIdLong: null,
   });
 });
 
@@ -434,6 +466,20 @@ test('detectTimerSource: HS-sourced timers with [LIN-xxx] prefix are classified 
   assert.strictEqual(detected.source, 'linear');
   assert.strictEqual(detected.issueKey, 'LIN-1234');
   assert.strictEqual(detected.teamKey, 'LIN');
+});
+
+test('detectTimerSource: Linear prefix with trailing [HS: LONGID] strips suffix and exposes hsConvIdLong', () => {
+  const detected = detectTimerSource('[LIN-1234] Re: subject — customer [HS: 3259965890]');
+  assert.strictEqual(detected.source, 'linear');
+  assert.strictEqual(detected.issueKey, 'LIN-1234');
+  assert.strictEqual(detected.teamKey, 'LIN');
+  assert.strictEqual(detected.issueTitle, 'Re: subject — customer');
+  assert.strictEqual(detected.hsConvIdLong, '3259965890');
+});
+
+test('detectTimerSource: Linear prefix without [HS: ...] suffix returns hsConvIdLong: null', () => {
+  const detected = detectTimerSource('[IT-123] Post booking automsg');
+  assert.strictEqual(detected.hsConvIdLong, null);
 });
 
 // ─── parseTeamKeyFromIssueKey ───────────────────────────────────────────

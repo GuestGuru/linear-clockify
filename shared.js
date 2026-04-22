@@ -116,18 +116,22 @@
     return { ticketNumber, subject, customer };
   }
 
-  function buildHsDescription({ issueKey, ticketNumber, subject, customer } = {}) {
+  function buildHsDescription({ issueKey, ticketNumber, subject, customer, hsConvIdLong } = {}) {
     const subj = subject && String(subject).trim();
     const cust = customer && String(customer).trim();
     const tnum = ticketNumber && String(ticketNumber).trim();
+    const convIdLong = hsConvIdLong && String(hsConvIdLong).trim();
 
     if (issueKey) {
       const body = subj || (tnum ? `HS #${tnum}` : '');
       const tail = cust ? (body ? `${body} — ${cust}` : cust) : body;
-      return tail ? `[${issueKey}] ${tail}` : `[${issueKey}]`;
+      const base = tail ? `[${issueKey}] ${tail}` : `[${issueKey}]`;
+      return convIdLong ? `${base} [HS: ${convIdLong}]` : base;
     }
 
-    // Fallback: no Linear identifier → legacy HS-prefix format
+    // Fallback: no Linear identifier → legacy HS-prefix format.
+    // The legacy prefix already carries HS identity, so we don't append a
+    // trailing [HS: LONGID] here even if one is provided.
     const prefix = tnum ? `[HS: #${tnum}]` : '[HS: #?]';
     const legacyTail = [subj, cust].filter(Boolean).join(' - ');
     return legacyTail ? `${prefix} ${legacyTail}` : prefix;
@@ -182,11 +186,19 @@
     if (linear) {
       const issueKey = linear[1];
       const teamKey = issueKey.split('-')[0];
+      let issueTitle = linear[2].trim();
+      let hsConvIdLong = null;
+      const hsSuffix = issueTitle.match(/\s*\[HS:\s*(\d+)\]\s*$/);
+      if (hsSuffix) {
+        hsConvIdLong = hsSuffix[1];
+        issueTitle = issueTitle.slice(0, hsSuffix.index).trim();
+      }
       return {
         source: 'linear',
         issueKey,
         teamKey,
-        issueTitle: linear[2].trim(),
+        issueTitle,
+        hsConvIdLong,
       };
     }
 

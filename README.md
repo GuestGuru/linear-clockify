@@ -56,13 +56,14 @@ Mobilon a lebegő timer container mellett van egy **✎** gomb, ami kinyitja ugy
 
 ### Toolbar popup
 
-Az extension ikon kattintásra mutatja a futó timer részleteit (issue, projekt, eltelt idő) és egy Stop gombot.
+Az extension ikon kattintásra mutatja a futó timer részleteit (issue, projekt, eltelt idő) és egy Stop gombot. A legutóbbi 3 bejegyzésnél a Linear link mellett egy `HS` link is megjelenik, ha az entry HelpScout ticketből indult — közvetlenül a conversation-re visz.
 
 ### Automatikus Clockify mapping
 
 A timer elindulásakor a Clockify entry automatikusan kitöltődik:
 
 - **Leírás:** `[TEAM_KEY-123] Issue title` (pl. `[IT-1] Post booking automsg`)
+- **HelpScout-ból indított timer:** `[LIN-123] Subject — Customer [HS: 3259965890]` — a záró `[HS: LONGID]` a HelpScout conversation long id-ja, így az entry-ről közvetlenül linkelhető a ticket.
 - **Projekt:** Linear team → Clockify projekt mapping alapján (beállítható)
 
 ### Alapértelmezett team → projekt mapping

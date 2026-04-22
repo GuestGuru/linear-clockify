@@ -6,12 +6,20 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      width: 300px;
+      width: 340px;
       padding: 16px;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 13px;
       color: #e8e8e8;
       background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      max-height: 560px;
+    }
+    #content {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      min-height: 0;
     }
     .header {
       font-size: 11px;
@@ -82,11 +90,182 @@
       font-size: 12px;
     }
     .settings-link:hover { text-decoration: underline; }
-  </style>
+
+    .section-header {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+      margin: 16px 0 8px;
+    }
+    .section-header:first-child { margin-top: 0; }
+    .recent-list { display: flex; flex-direction: column; gap: 6px; }
+    .recent-row {
+      background: #23233a;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .recent-row.running { border: 1px solid #ef4444; }
+    .recent-row-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      min-width: 0;
+    }
+    .recent-issue-link {
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #a78bfa;
+      text-decoration: none;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+    .recent-issue-link:hover { text-decoration: underline; }
+    .recent-hs-link {
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #60a5fa;
+      text-decoration: none;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+    .recent-hs-link:hover { text-decoration: underline; }
+    .recent-desc {
+      color: #ccc;
+      font-size: 12px;
+      line-height: 1.4;
+      min-width: 0;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .recent-row-bottom {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+    }
+    .recent-time-input {
+      width: 46px;
+      background: #1a1a2e;
+      border: 1px solid #3a3a55;
+      border-radius: 4px;
+      color: #e8e8e8;
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 12px;
+      padding: 2px 4px;
+      text-align: center;
+    }
+    .recent-time-input:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+    .recent-time-input.running-end {
+      color: #ef4444;
+      background: transparent;
+      border: 1px dashed #3a3a55;
+    }
+    .recent-dash { color: #666; }
+    .recent-duration {
+      color: #888;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    .recent-status {
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    .recent-status.success { color: #10b981; }
+    .recent-status.error { color: #ef4444; }
+    .recent-status.info { color: #888; }
+    .recent-empty {
+      color: #666;
+      font-size: 12px;
+      text-align: center;
+      padding: 8px 0;
+    }
+    .recent-delete {
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid #3a3a55;
+      color: #888;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .recent-delete:hover {
+      color: #ef4444;
+      border-color: #ef4444;
+    }
+    .recent-delete.confirm {
+      background: #ef4444;
+      color: #fff;
+      border-color: #ef4444;
+      font-size: 10px;
+      width: auto;
+      padding: 0 6px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #3a3a55;
+      border-top-color: #a78bfa;
+      border-radius: 50%;
+      animation: lc-spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    .spinner-center {
+      text-align: center;
+      padding: 12px 0;
+      color: #888;
+      font-size: 12px;
+    }
+    .spinner-center .spinner {
+      margin-right: 6px;
+    }
+    @keyframes lc-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .footer-links a {
+      color: #6366f1;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    .footer-links a:hover { text-decoration: underline; }
+</style>
 </head>
 <body>
-  <div class="header">Clockify Timer</div>
-  <div id="content">Loading...</div>
+  <div id="content"><div class="spinner-center"><span class="spinner"></span>Betöltés…</div></div>
+  <div class="footer-links">
+    <a href="#" id="settings-link">⚙️ Beállítások</a>
+    <a href="https://app.clockify.me/tracker" target="_blank" rel="noopener noreferrer">⏱ Clockify</a>
+  </div>
+  <script src="shared.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
