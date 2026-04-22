@@ -114,21 +114,15 @@ async function handleHsButtonClick(event) {
     const { activeTimer } = await chrome.storage.local.get('activeTimer');
     console.log('[LC HS] click', { buttonId: button.id, ticketNumber: ctx.ticketNumber, activeTimer });
 
-    if (activeTimer && activeTimer.source === 'hs' &&
-        activeTimer.ticketNumber === ctx.ticketNumber && !activeTimer.external) {
+    const isRunningHere = activeTimer && activeTimer.source === 'hs' &&
+                          activeTimer.ticketNumber === ctx.ticketNumber && !activeTimer.external;
+    const isRunningElsewhere = activeTimer && !activeTimer.external && !isRunningHere;
+
+    if (isRunningHere || isRunningElsewhere) {
       button.textContent = '⏳ Stopping…';
       const result = await chrome.runtime.sendMessage({ action: 'stopTimer' });
       console.log('[LC HS] stopTimer ←', result);
       if (result.error) showHsError(result.error, { issueKey: result.issueKey });
-    } else if (activeTimer && !activeTimer.external) {
-      button.textContent = '⏳ Switching…';
-      const result = await chrome.runtime.sendMessage({
-        action: 'stopAndStartHsTimer',
-        data: ctx,
-      });
-      console.log('[LC HS] stopAndStartHsTimer ←', result);
-      if (result.error) showHsError(result.error, { issueKey: result.issueKey });
-      if (result.warning) showHsWarning(result.warning);
     } else {
       button.textContent = '⏳ Starting…';
       const result = await chrome.runtime.sendMessage({
@@ -145,9 +139,27 @@ async function handleHsButtonClick(event) {
     button.textContent = originalText;
   } finally {
     button.disabled = false;
-    // updateHsButtonState (triggered by storage change) will overwrite textContent
-    // with the correct Stop/Start label. If it doesn't fire (e.g. error), leave
-    // originalText restored above.
+  }
+}
+
+async function handleHsDoneButtonClick(event) {
+  const button = event?.currentTarget;
+  if (!button) return;
+  const originalText = button.textContent;
+  button.disabled = true;
+
+  try {
+    button.textContent = '⏳ Stopping…';
+    const result = await chrome.runtime.sendMessage({ action: 'stopAndDoneTimer' });
+    console.log('[LC HS] stopAndDoneTimer ←', result);
+    if (result.error) showHsError(result.error);
+    else if (result.warning) showHsWarning(result.warning);
+  } catch (err) {
+    console.error('[LC HS] done click error', err);
+    showHsError(err.message);
+    button.textContent = originalText;
+  } finally {
+    button.disabled = false;
   }
 }
 
