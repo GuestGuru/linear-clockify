@@ -711,9 +711,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'startHsTimer': {
           return await startHsTimer(message.data);
         }
-        case 'stopAndStartHsTimer': {
+        case 'stopAndDoneTimer': {
+          const { activeTimer } = await chrome.storage.local.get('activeTimer');
+          if (!activeTimer) {
+            return { success: true, warning: 'Nem volt futó timer' };
+          }
+          const issueKey = activeTimer.issueKey || null;
+          const isExternal = !!activeTimer.external;
+
           await stopTimer();
-          return await startHsTimer(message.data);
+
+          if (!issueKey || isExternal) {
+            return {
+              success: true,
+              warning: isExternal
+                ? 'Külső timer: Linear state nem frissült'
+                : 'Ismeretlen issue: Linear state nem frissült',
+            };
+          }
+
+          const done = await markLinearIssueDone(issueKey);
+          if (done.error) {
+            return { success: true, warning: `Linear Done sikertelen: ${done.error}` };
+          }
+          return { success: true };
         }
         case 'createHsManualEntry': {
           return await createHsManualEntry(message.data);
